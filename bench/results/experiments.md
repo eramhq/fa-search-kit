@@ -300,5 +300,5 @@ is measured against light without it (phase1.md).
   rule as fallback, vs lexicon only): 0 up, 0 down on dev: the lexicon already knows
   the benchmark's verbs. But see the held-out diagnostic in phase1.md: with a verb
   missing from the lexicon, lexicon-only loses zwnj-join (news Pagefind −31), so the
-  rule fallback is free insurance. Not switched after the test split was read (the
-  reported numbers are for the shipped default); first thing to revisit.
+  rule fallback is free insurance. Switched afterwards and re-measured against the
+  previous full (`fa-full-v1`): dev and test both 1 up, 0 down, 0 blocking.

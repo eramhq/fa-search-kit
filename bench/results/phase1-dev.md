@@ -15,17 +15,17 @@ Mean recall@10 over all variant types (each type weighted equally; canonical exc
 
 | corpus | engine | stock variants | snowball variants | fa-light variants | fa-standard variants | fa-full variants | stock canonical | snowball canonical | fa-light canonical | fa-standard canonical | fa-full canonical |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| wiki | pagefind | 29 | 48 | 54 | 61 | 63 | 99 | 97 | 99 | 98 | 99 |
+| wiki | pagefind | 29 | 48 | 54 | 61 | 64 | 99 | 97 | 99 | 98 | 99 |
 | wiki | orama | 0 | 51 | 60 | 62 | 62 | 0 | 95 | 97 | 96 | 96 |
 | wiki | minisearch | 42 | 59 | 65 | 67 | 68 | 100 | 100 | 100 | 100 | 100 |
 | wiki | flexsearch | 22 | 37 | 49 | 58 | 60 | 100 | 99 | 100 | 99 | 99 |
-| wiki | lunr | 1 | 57 | 65 | 67 | 67 | 0 | 100 | 100 | 100 | 100 |
+| wiki | lunr | 1 | 57 | 65 | 67 | 68 | 0 | 100 | 100 | 100 | 100 |
 | wiki | orama-exact | 0 | 57 | 64 | 67 | 67 | 0 | 99 | 100 | 100 | 100 |
 | news | pagefind | 29 | 48 | 50 | 58 | 65 | 100 | 100 | 100 | 100 | 100 |
-| news | orama | 0 | 76 | 78 | 79 | 79 | 0 | 98 | 97 | 97 | 97 |
+| news | orama | 0 | 76 | 78 | 79 | 80 | 0 | 98 | 97 | 97 | 97 |
 | news | minisearch | 80 | 85 | 86 | 86 | 86 | 100 | 100 | 100 | 100 | 100 |
-| news | flexsearch | 13 | 29 | 40 | 52 | 62 | 100 | 100 | 99 | 100 | 100 |
-| news | lunr | 0 | 82 | 84 | 84 | 84 | 0 | 99 | 100 | 100 | 100 |
+| news | flexsearch | 13 | 29 | 40 | 52 | 61 | 100 | 100 | 99 | 100 | 100 |
+| news | lunr | 0 | 82 | 84 | 84 | 85 | 0 | 99 | 100 | 100 | 100 |
 | news | orama-exact | 0 | 84 | 85 | 85 | 85 | 0 | 100 | 100 | 100 | 100 |
 | products | pagefind | 37 | 53 | 59 | 63 | 64 | 100 | 100 | 99 | 99 | 99 |
 | products | orama | 11 | 55 | 61 | 62 | 62 | 10 | 87 | 85 | 86 | 85 |
@@ -45,7 +45,7 @@ Same view as MRR@10 (×100): rank losses that recall@10 hides, e.g. when an OR e
 | wiki | lunr | 0 | 45 | 56 | 59 | 60 | 0 | 94 | 95 | 94 | 94 |
 | wiki | orama-exact | 0 | 41 | 50 | 53 | 54 | 0 | 90 | 92 | 91 | 91 |
 | news | pagefind | 27 | 46 | 49 | 56 | 63 | 97 | 98 | 97 | 97 | 97 |
-| news | orama | 0 | 57 | 59 | 62 | 61 | 0 | 86 | 80 | 82 | 81 |
+| news | orama | 0 | 57 | 59 | 62 | 62 | 0 | 86 | 80 | 82 | 81 |
 | news | minisearch | 71 | 78 | 81 | 82 | 82 | 99 | 99 | 99 | 99 | 99 |
 | news | flexsearch | 12 | 29 | 40 | 51 | 60 | 99 | 99 | 98 | 98 | 98 |
 | news | lunr | 0 | 72 | 77 | 76 | 77 | 0 | 95 | 97 | 95 | 95 |
@@ -164,20 +164,20 @@ Same view as MRR@10 (×100): rank losses that recall@10 hides, e.g. when an OR e
 | variant | n | pagefind | orama | minisearch | flexsearch | lunr | orama-exact |
 |---|---:|---:|---:|---:|---:|---:|---:|
 | canonical | 500 | 99 | 96 | 100 | 99 | 100 | 100 |
-| arabic-yk | 375 | 99 | 97 | 100 | 99 | 100 | 100 |
+| arabic-yk | 375 | 99 | 96 | 100 | 99 | 100 | 100 |
 | alef-madda | 154 | 99 | 90 | 100 | 100 | 100 | 100 |
 | hamza | 103 | 87 | 84 | 92 | 88 | 92 | 91 |
 | heh-yeh | 152 | 100 | 92 | 100 | 100 | 100 | 99 |
 | digits | 103 | 100 | 87 | 100 | 100 | 100 | 100 |
 | zwnj-space | 147 | 97 | 89 | 100 | 100 | 100 | 94 |
 | zwnj-join | 147 | 100 | 95 | 100 | 100 | 100 | 99 |
-| zwnj-add | 32 | 91 | 78 | 88 | 88 | 84 | 84 |
+| zwnj-add | 32 | 94 | 84 | 94 | 91 | 91 | 91 |
 | plural-add | 159 | 98 | 94 | 100 | 99 | 99 | 99 |
 | plural-drop | 152 | 98 | 91 | 99 | 97 | 98 | 99 |
 | clitic-add | 149 | 74 | 72 | 87 | 70 | 86 | 85 |
 | homophone | 369 | 9 | 28 | 33 | 1 | 32 | 32 |
 | typo-adjacent | 479 | 16 | 24 | 27 | 1 | 27 | 27 |
-| typo-delete | 479 | 31 | 38 | 30 | 6 | 29 | 29 |
+| typo-delete | 479 | 30 | 38 | 30 | 6 | 29 | 29 |
 | typo-transpose | 479 | 9 | 22 | 28 | 0 | 27 | 27 |
 | layout-isiri9147 | 500 | 0 | 0 | 1 | 0 | 1 | 1 |
 | layout-win-legacy | 500 | 0 | 0 | 1 | 0 | 1 | 1 |
@@ -305,21 +305,21 @@ Same view as MRR@10 (×100): rank losses that recall@10 hides, e.g. when an OR e
 | canonical | 500 | 100 | 97 | 100 | 100 | 100 | 100 |
 | arabic-yk | 460 | 100 | 97 | 100 | 100 | 100 | 100 |
 | alef-madda | 154 | 99 | 95 | 100 | 99 | 100 | 100 |
-| hamza | 146 | 86 | 95 | 100 | 86 | 99 | 99 |
+| hamza | 146 | 86 | 96 | 100 | 86 | 99 | 99 |
 | heh-yeh | 153 | 99 | 97 | 100 | 99 | 100 | 100 |
 | digits | 78 | 100 | 97 | 100 | 100 | 100 | 100 |
 | zwnj-space | 183 | 100 | 97 | 100 | 100 | 99 | 100 |
-| zwnj-join | 183 | 100 | 96 | 100 | 100 | 100 | 100 |
+| zwnj-join | 183 | 100 | 97 | 100 | 100 | 100 | 100 |
 | zwnj-add | 153 | 99 | 93 | 99 | 99 | 99 | 99 |
-| plural-add | 214 | 99 | 96 | 100 | 99 | 100 | 100 |
+| plural-add | 214 | 98 | 96 | 100 | 98 | 100 | 100 |
 | plural-drop | 152 | 100 | 98 | 100 | 100 | 100 | 100 |
-| clitic-add | 169 | 92 | 96 | 100 | 88 | 99 | 100 |
-| verb-tense | 213 | 95 | 89 | 100 | 91 | 99 | 99 |
-| verb-tense-ud | 147 | 84 | 85 | 100 | 82 | 99 | 99 |
-| verb-negation | 189 | 11 | 78 | 100 | 7 | 98 | 98 |
-| homophone | 481 | 15 | 81 | 97 | 0 | 90 | 96 |
-| typo-adjacent | 499 | 14 | 81 | 98 | 1 | 90 | 96 |
-| typo-delete | 499 | 35 | 83 | 98 | 6 | 91 | 96 |
+| clitic-add | 169 | 92 | 96 | 100 | 88 | 100 | 100 |
+| verb-tense | 213 | 95 | 90 | 100 | 91 | 99 | 99 |
+| verb-tense-ud | 147 | 84 | 88 | 100 | 82 | 99 | 99 |
+| verb-negation | 189 | 11 | 91 | 100 | 7 | 99 | 98 |
+| homophone | 481 | 15 | 81 | 97 | 0 | 91 | 96 |
+| typo-adjacent | 499 | 14 | 81 | 98 | 1 | 91 | 96 |
+| typo-delete | 499 | 35 | 84 | 98 | 6 | 91 | 97 |
 | typo-transpose | 499 | 12 | 82 | 98 | 0 | 92 | 96 |
 | layout-isiri9147 | 500 | 0 | 0 | 0 | 0 | 0 | 0 |
 | layout-win-legacy | 500 | 0 | 0 | 0 | 0 | 0 | 0 |
@@ -441,14 +441,14 @@ Same view as MRR@10 (×100): rank losses that recall@10 hides, e.g. when an OR e
 | variant | n | pagefind | orama | minisearch | flexsearch | lunr | orama-exact |
 |---|---:|---:|---:|---:|---:|---:|---:|
 | canonical | 500 | 99 | 85 | 100 | 100 | 99 | 96 |
-| std-typing | 105 | 88 | 52 | 88 | 88 | 85 | 81 |
+| std-typing | 105 | 88 | 52 | 88 | 88 | 86 | 81 |
 | arabic-yk | 424 | 100 | 85 | 100 | 100 | 99 | 96 |
 | alef-madda | 163 | 100 | 80 | 99 | 99 | 99 | 91 |
 | hamza | 61 | 95 | 59 | 95 | 97 | 90 | 70 |
 | heh-yeh | 150 | 99 | 95 | 99 | 99 | 99 | 97 |
 | digits | 149 | 100 | 98 | 100 | 100 | 100 | 99 |
 | zwnj-space | 88 | 95 | 73 | 94 | 91 | 89 | 76 |
-| zwnj-join | 88 | 95 | 70 | 97 | 95 | 93 | 85 |
+| zwnj-join | 88 | 95 | 69 | 97 | 95 | 93 | 85 |
 | zwnj-add | 61 | 95 | 79 | 87 | 90 | 82 | 75 |
 | plural-add | 423 | 99 | 85 | 100 | 99 | 99 | 96 |
 | plural-drop | 53 | 98 | 74 | 98 | 100 | 89 | 83 |
@@ -470,22 +470,22 @@ Recall averaged within each verb lemma, then over lemmas.
 | corpus | type | lemmas | engine | stock | snowball | fa-light | fa-standard | fa-full |
 |---|---|---:|---|---:|---:|---:|---:|---:|
 | news | verb-tense | 28 | pagefind | 6 | 20 | 6 | 21 | 88 |
-| news | verb-tense | 28 | orama | 0 | 87 | 97 | 93 | 89 |
+| news | verb-tense | 28 | orama | 0 | 87 | 97 | 93 | 91 |
 | news | verb-tense | 28 | minisearch | 99 | 100 | 100 | 100 | 100 |
 | news | verb-tense | 28 | flexsearch | 6 | 9 | 2 | 9 | 86 |
-| news | verb-tense | 28 | lunr | 0 | 97 | 99 | 97 | 97 |
+| news | verb-tense | 28 | lunr | 0 | 97 | 99 | 97 | 99 |
 | news | verb-tense | 28 | orama-exact | 0 | 95 | 100 | 98 | 98 |
 | news | verb-tense-ud | 25 | pagefind | 5 | 34 | 5 | 34 | 88 |
-| news | verb-tense-ud | 25 | orama | 0 | 94 | 94 | 92 | 87 |
+| news | verb-tense-ud | 25 | orama | 0 | 94 | 94 | 92 | 89 |
 | news | verb-tense-ud | 25 | minisearch | 100 | 100 | 100 | 100 | 100 |
 | news | verb-tense-ud | 25 | flexsearch | 2 | 19 | 1 | 19 | 88 |
-| news | verb-tense-ud | 25 | lunr | 0 | 98 | 100 | 98 | 98 |
+| news | verb-tense-ud | 25 | lunr | 0 | 98 | 100 | 98 | 100 |
 | news | verb-tense-ud | 25 | orama-exact | 0 | 98 | 100 | 98 | 98 |
 | news | verb-negation | 25 | pagefind | 0 | 0 | 0 | 0 | 4 |
-| news | verb-negation | 25 | orama | 0 | 91 | 97 | 94 | 92 |
+| news | verb-negation | 25 | orama | 0 | 91 | 97 | 94 | 96 |
 | news | verb-negation | 25 | minisearch | 99 | 100 | 100 | 100 | 100 |
 | news | verb-negation | 25 | flexsearch | 4 | 0 | 0 | 0 | 1 |
-| news | verb-negation | 25 | lunr | 0 | 96 | 99 | 96 | 97 |
+| news | verb-negation | 25 | lunr | 0 | 96 | 99 | 96 | 99 |
 | news | verb-negation | 25 | orama-exact | 0 | 98 | 100 | 98 | 98 |
 
 ## Timing
@@ -494,21 +494,21 @@ Index build and total search time for all queries of the corpus (one Node proces
 
 | corpus | engine | stock build s | snowball build s | fa-light build s | fa-standard build s | fa-full build s | stock ms/query | snowball ms/query | fa-light ms/query | fa-standard ms/query | fa-full ms/query |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| wiki | pagefind | 83.6 | 165.6 | 283.9 | 426.0 | 68.0 | 29.40 | 27.41 | 55.78 | 397.52 | 30.01 |
-| wiki | orama | 0.9 | 142.5 | 282.5 | 441.0 | 3947.4 | 0.43 | 6.68 | 14.05 | 30.12 | 29.56 |
-| wiki | minisearch | 33.6 | 40.1 | 171.6 | 241.6 | 194.1 | 0.35 | 5.29 | 3.45 | 6.91 | 6.53 |
-| wiki | flexsearch | 13.2 | 20.5 | 77.7 | 138.6 | 151.5 | 1.64 | 0.09 | 0.63 | 1.05 | 1.92 |
-| wiki | lunr | 8.5 | 112.2 | 219.8 | 463.1 | 3977.0 | 0.01 | 6.66 | 16.24 | 26.67 | 28.05 |
-| wiki | orama-exact | 0.5 | 29.9 | 320.6 | 511.1 | 4065.3 | 0.20 | 1.48 | 9.45 | 21.36 | 21.21 |
-| news | pagefind | 62.6 | 113.9 | 145.0 | 201.6 | 3590.2 | 11.90 | 12.66 | 23.25 | 38.01 | 27.79 |
-| news | orama | 0.3 | 34.0 | 84.0 | 105.7 | 35.2 | 0.05 | 17.65 | 16.88 | 294.71 | 20.78 |
-| news | minisearch | 9.2 | 14.9 | 13.9 | 19.1 | 14.7 | 3.94 | 11.03 | 2.78 | 12.29 | 5.37 |
-| news | flexsearch | 6.6 | 8.9 | 10.1 | 13.1 | 11.3 | 1.94 | 0.71 | 0.28 | 0.38 | 0.63 |
-| news | lunr | 4.3 | 22.7 | 19.5 | 19.4 | 15.6 | 0.01 | 20.62 | 22.48 | 24.99 | 9.38 |
-| news | orama-exact | 0.2 | 12.8 | 35.2 | 50.6 | 26.6 | 0.02 | 5.96 | 5.68 | 16.47 | 7.44 |
-| products | pagefind | 31.9 | 43.6 | 25.4 | 36.1 | 21.4 | 3.10 | 7.72 | 2.91 | 9.25 | 3.14 |
-| products | orama | 0.2 | 1.1 | 1.0 | 0.9 | 0.9 | 0.12 | 11.45 | 3.48 | 3.59 | 3.84 |
-| products | minisearch | 0.5 | 1.2 | 0.7 | 0.6 | 0.6 | 2.59 | 4.06 | 1.53 | 1.60 | 1.43 |
-| products | flexsearch | 0.5 | 0.6 | 0.5 | 0.5 | 0.6 | 0.15 | 0.27 | 0.13 | 0.13 | 0.13 |
-| products | lunr | 0.5 | 2.0 | 1.2 | 1.1 | 0.9 | 0.01 | 5.53 | 14.09 | 4.83 | 3.90 |
-| products | orama-exact | 0.1 | 0.5 | 1.0 | 0.9 | 0.7 | 0.06 | 2.59 | 7.05 | 3.48 | 2.88 |
+| wiki | pagefind | 83.6 | 165.6 | 283.9 | 426.0 | 172.1 | 29.40 | 27.41 | 55.78 | 397.52 | 54.86 |
+| wiki | orama | 0.9 | 142.5 | 282.5 | 441.0 | 160.4 | 0.43 | 6.68 | 14.05 | 30.12 | 18.25 |
+| wiki | minisearch | 33.6 | 40.1 | 171.6 | 241.6 | 47.7 | 0.35 | 5.29 | 3.45 | 6.91 | 3.16 |
+| wiki | flexsearch | 13.2 | 20.5 | 77.7 | 138.6 | 28.6 | 1.64 | 0.09 | 0.63 | 1.05 | 0.15 |
+| wiki | lunr | 8.5 | 112.2 | 219.8 | 463.1 | 90.7 | 0.01 | 6.66 | 16.24 | 26.67 | 21.08 |
+| wiki | orama-exact | 0.5 | 29.9 | 320.6 | 511.1 | 179.1 | 0.20 | 1.48 | 9.45 | 21.36 | 14.53 |
+| news | pagefind | 62.6 | 113.9 | 145.0 | 201.6 | 91.9 | 11.90 | 12.66 | 23.25 | 38.01 | 23.07 |
+| news | orama | 0.3 | 34.0 | 84.0 | 105.7 | 34.2 | 0.05 | 17.65 | 16.88 | 294.71 | 27.83 |
+| news | minisearch | 9.2 | 14.9 | 13.9 | 19.1 | 18.2 | 3.94 | 11.03 | 2.78 | 12.29 | 12.64 |
+| news | flexsearch | 6.6 | 8.9 | 10.1 | 13.1 | 13.5 | 1.94 | 0.71 | 0.28 | 0.38 | 0.77 |
+| news | lunr | 4.3 | 22.7 | 19.5 | 19.4 | 62.4 | 0.01 | 20.62 | 22.48 | 24.99 | 26.10 |
+| news | orama-exact | 0.2 | 12.8 | 35.2 | 50.6 | 97.5 | 0.02 | 5.96 | 5.68 | 16.47 | 20.24 |
+| products | pagefind | 31.9 | 43.6 | 25.4 | 36.1 | 40.1 | 3.10 | 7.72 | 2.91 | 9.25 | 7.33 |
+| products | orama | 0.2 | 1.1 | 1.0 | 0.9 | 2.2 | 0.12 | 11.45 | 3.48 | 3.59 | 11.36 |
+| products | minisearch | 0.5 | 1.2 | 0.7 | 0.6 | 1.8 | 2.59 | 4.06 | 1.53 | 1.60 | 5.49 |
+| products | flexsearch | 0.5 | 0.6 | 0.5 | 0.5 | 1.9 | 0.15 | 0.27 | 0.13 | 0.13 | 1.00 |
+| products | lunr | 0.5 | 2.0 | 1.2 | 1.1 | 3.1 | 0.01 | 5.53 | 14.09 | 4.83 | 7.26 |
+| products | orama-exact | 0.1 | 0.5 | 1.0 | 0.9 | 1.5 | 0.06 | 2.59 | 7.05 | 3.48 | 3.97 |

@@ -58,9 +58,9 @@ any-word engines (H10).
 | plural-add | 222 | 24 → 99 → 100 → 99 | 37 → 99 → 99 → 99 | 98 → 100 → 100 → 100 | 0 → 99 → 98 → 98 | 0 → 96 → 95 → 96 | 0 → 100 → 99 → 99 |
 | plural-drop | 148 | 99 → 100 → 100 → 100 | 75 → 97 → 99 → 99 | 97 → 99 → 99 → 99 | 0 → 99 → 99 → 99 | 0 → 96 → 96 → 97 | 0 → 99 → 99 → 99 |
 | clitic-add | 158 | 42 → 46 → 49 → 91 | 1 → 14 → 18 → 87 | 97 → 98 → 97 → 99 | 1 → 96 → 94 → 98 | 1 → 85 → 82 → 94 | 1 → 96 → 97 → 99 |
-| verb-tense | 198 | 22 → 28 → 28 → 97 | 11 → 12 → 13 → 93 | 99 → 99 → 98 → 98 | 1 → 98 → 96 → 96 | 1 → 92 → 87 → 87 | 1 → 98 → 98 → 97 |
-| verb-tense-ud | 153 | 8 → 43 → 43 → 82 | 5 → 26 → 27 → 78 | 98 → 99 → 97 → 97 | 0 → 97 → 95 → 96 | 0 → 89 → 86 → 86 | 0 → 98 → 96 → 95 |
-| verb-negation | 176 | 7 → 9 → 8 → 13 | 5 → 5 → 5 → 8 | 99 → 100 → 99 → 99 | 1 → 98 → 95 → 96 | 1 → 93 → 91 → 81 | 1 → 98 → 97 → 95 |
+| verb-tense | 198 | 22 → 28 → 28 → 97 | 11 → 12 → 13 → 93 | 99 → 99 → 98 → 98 | 1 → 98 → 96 → 96 | 1 → 92 → 87 → 88 | 1 → 98 → 98 → 98 |
+| verb-tense-ud | 153 | 8 → 43 → 43 → 82 | 5 → 26 → 27 → 78 | 98 → 99 → 97 → 97 | 0 → 97 → 95 → 97 | 0 → 89 → 86 → 87 | 0 → 98 → 96 → 97 |
+| verb-negation | 176 | 7 → 9 → 8 → 13 | 5 → 5 → 5 → 8 | 99 → 100 → 99 → 99 | 1 → 98 → 95 → 96 | 1 → 93 → 91 → 90 | 1 → 98 → 97 → 96 |
 | combo | 339 | 11 → 67 → 99 → 99 | 6 → 45 → 98 → 98 | 52 → 97 → 100 → 100 | 0 → 96 → 99 → 99 | 0 → 90 → 96 → 97 | 0 → 96 → 100 → 100 |
 
 **products** (recall@10 %, test split; stock → snowball → fa-standard → fa-full)
@@ -72,11 +72,11 @@ any-word engines (H10).
 | std-typing | 110 | 25 → 83 → 88 → 88 | 7 → 70 → 91 → 90 | 23 → 69 → 88 → 88 | 2 → 70 → 88 → 88 | 2 → 43 → 55 → 56 | 2 → 70 → 87 → 87 |
 | hamza | 68 | 47 → 96 → 96 → 96 | 0 → 96 → 96 → 96 | 62 → 97 → 97 → 97 | 44 → 97 → 97 → 97 | 43 → 72 → 75 → 75 | 43 → 85 → 82 → 82 |
 | heh-yeh | 150 | 66 → 64 → 100 → 100 | 33 → 0 → 100 → 100 | 93 → 92 → 100 → 100 | 28 → 92 → 100 → 100 | 25 → 80 → 97 → 96 | 25 → 90 → 98 → 98 |
-| digits | 151 | 36 → 33 → 100 → 100 | 0 → 0 → 100 → 100 | 71 → 70 → 100 → 100 | 0 → 70 → 100 → 100 | 21 → 67 → 98 → 98 | 21 → 68 → 100 → 100 |
+| digits | 151 | 36 → 33 → 100 → 100 | 0 → 0 → 100 → 100 | 71 → 70 → 100 → 100 | 0 → 70 → 100 → 99 | 21 → 67 → 98 → 98 | 21 → 68 → 100 → 100 |
 | zwnj-space | 71 | 17 → 17 → 99 → 99 | 99 → 0 → 97 → 97 | 28 → 38 → 96 → 96 | 6 → 44 → 94 → 94 | 4 → 45 → 72 → 73 | 4 → 39 → 73 → 73 |
 | zwnj-join | 71 | 100 → 99 → 99 → 99 | 0 → 100 → 100 → 100 | 51 → 99 → 97 → 97 | 6 → 99 → 97 → 97 | 4 → 75 → 70 → 70 | 4 → 92 → 89 → 89 |
 | zwnj-add | 64 | 41 → 78 → 84 → 89 | 66 → 59 → 89 → 89 | 28 → 63 → 83 → 83 | 11 → 64 → 84 → 84 | 11 → 41 → 69 → 72 | 11 → 56 → 77 → 77 |
-| plural-add | 411 | 91 → 99 → 99 → 99 | 0 → 98 → 99 → 99 | 91 → 100 → 100 → 100 | 13 → 99 → 100 → 100 | 14 → 86 → 87 → 87 | 14 → 97 → 98 → 97 |
+| plural-add | 411 | 91 → 99 → 99 → 99 | 0 → 98 → 99 → 99 | 91 → 100 → 100 → 100 | 13 → 99 → 100 → 100 | 14 → 86 → 87 → 87 | 14 → 97 → 98 → 98 |
 | plural-drop | 45 | 91 → 89 → 93 → 93 | 18 → 89 → 98 → 96 | 13 → 82 → 91 → 89 | 4 → 80 → 91 → 89 | 4 → 44 → 58 → 60 | 4 → 78 → 82 → 80 |
 | clitic-add | 245 | 85 → 86 → 84 → 87 | 3 → 5 → 5 → 71 | 92 → 90 → 90 → 95 | 14 → 90 → 91 → 96 | 14 → 83 → 83 → 77 | 14 → 90 → 91 → 92 |
 | combo | 360 | 25 → 84 → 99 → 99 | 0 → 66 → 99 → 99 | 50 → 93 → 99 → 99 | 11 → 92 → 99 → 99 | 15 → 75 → 85 → 85 | 15 → 90 → 97 → 97 |
@@ -117,15 +117,15 @@ at q < .05 **and** a drop of ≥ 2 points.
 | A → B | cells | up | down | blocking |
 |---|---:|---:|---:|---:|
 | snowball → fa-standard | 402 | 124 | 16 | 14 |
-| snowball → fa-full | 402 | 133 | 19 | 13 |
+| snowball → fa-full | 402 | 132 | 19 | 12 |
 | stock → fa-standard | 402 | 294 | 17 | 10 |
-| stock → fa-full | 402 | 300 | 18 | 10 |
+| stock → fa-full | 402 | 299 | 19 | 11 |
 | snowball → fa-light | 402 | 125 | 67 | 66 (no stemmer: plurals, verbs) |
 | stock → fa-light | 402 | 267 | 13 | 11 |
 
 **Not a clean pass.** What blocks, against Snowball:
-1. **Orama, 8 news cells + 1 products in each profile**: MRR drops of 3.8–9.4 points
-   (recall −0.4 to −4.5; −11.4 on verb-negation for fa-full). Cause verified in Orama's
+1. **Orama, 8 news cells + 1 products (fa-standard), 7 + 1 (fa-full)**: MRR drops of
+   3.8–7.6 points (recall −0.4 to −4.5). Cause verified in Orama's
    code: its default prefix matching sums the scores of every indexed word a query
    term prefixes, so every extra index term fa-search adds (compound parts, the other
    half-space spelling, the madda-less spelling) adds noise. With prefix matching off
@@ -222,7 +222,11 @@ complete (verb lemmas for every engine, `fa-full-lemma`), test split, news:
 With the verb unlisted, full falls back to Snowball's level (verb-tense 28, verb-tense-ud
 43–45): the gain is the lexicon's coverage, not a rule that generalizes. Coverage is
 the question for real text: the lexicon has 356 of Hazm's 692 pairs (the rest have
-fewer than 20 uses of all their forms in 1.4M word types). The zwnj-join drop shows
-that full's joined-«می» handling (lexicon only) also depends on it; the rule fallback
-(`joinedMi: "rule"` in full) cost nothing on dev and removes that dependency. Not
-switched after the test split was read; first thing to revisit.
+fewer than 20 uses of all their forms in 1.4M word types). The zwnj-join drop showed
+that full's joined-«می» handling (then lexicon only) also depended on it.
+
+**Switched after this report was first written:** full now falls back to the «می» rule
+for verbs the lexicon lacks. Measured against the version reported before
+(`fa-full-v1`): dev 1 cell up, 0 down; test 1 up, 0 down, 0 blocking. The tables and
+gate counts above are for the switched version; the few cells that moved are on the
+any-word engines (e.g. Orama news verb-negation 81 → 90).

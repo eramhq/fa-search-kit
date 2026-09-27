@@ -86,7 +86,7 @@ export function createAnalyzer(options: AnalyzerOptions = {}): Analyzer {
   const spellings = options.spellings ?? stemming; // H5b
   const stemmer = !stemming ? null : new Stemmer({
     closedSplit: true,
-    joinedMi: profile === "full" ? "lexicon" : "rule", // H2
+    joinedMi: "rule", // H2; in full the lexicon's verb analysis runs first, the rule covers verbs it lacks
     negation: "keep", // H3
     derivational: "keep", // H8
     clitics: profile === "full" ? FULL_CLITICS : DEFAULT_CLITICS, // H1

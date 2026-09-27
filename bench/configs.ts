@@ -87,6 +87,8 @@ export const CONFIGS: Config[] = [
   // they were removed from here when their options were decided (several options no
   // longer exist, and the profile defaults moved to the winners).
   fa("fa-full-lemma", { profile: "full", lexicon, verbs: "lemma" }, true),
+  // fa-full as reported in phase1.md (joined «می» by lexicon only), before the rule fallback.
+  { ...fa("fa-full-v1", { profile: "full", lexicon, joinedMi: "lexicon" }, true), anyWordAnalyzer: fa("fa-full-v1/any", { profile: "full", lexicon, joinedMi: "lexicon", verbs: "stem" }).analyzer },
   fa("fa-full-heldout", { profile: "full", get lexicon() { return heldOutLexicon(); } }, true),
   // The light profile before H7's decision; its runs were fa-light's until then.
   fa("h7-light-none", { profile: "light", alefMadda: false }, true),

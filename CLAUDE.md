@@ -13,7 +13,7 @@ MiniSearch, FlexSearch and Lunr, upstream PRs, and a public benchmark.
 - **Test every claim.** A "can't" or "don't" from anyone (Snowball maintainers, Lucene, a paper, a research summary, us) is a hypothesis until the benchmark measures it. Try it, keep what wins, and write up what loses so nobody retries it blindly. The starting list is in PLAN.md under "Principle".
 - **Benchmark gates everything.** A change ships only if it improves its target rows (recall@10, MRR per variant type × engine × config) without regressing the others.
 - **Same analyzer at index time and query time.** Never let the two drift. Index mode may emit extra terms (a ZWNJ compound and its parts); query mode emits one term per token; query terms ⊆ index terms of the same text (tested in `test/analyzer.test.ts`).
-- **License hygiene.** Ship only MIT/BSD/Apache data. CC BY-SA, ODbL and GPL data (UD treebanks, Wikipedia, lemmatization-lists, Bijankhan, Perstem) are for evaluation only.
+- **License hygiene.** Ship only MIT/BSD/Apache data. CC BY-SA, ODbL and GPL data (UD treebanks, Wikipedia, lemmatization-lists, Bijankhan, Perstem) are for evaluation only. Everything that ships is listed in [DATA-SOURCES.md](DATA-SOURCES.md).
 - **Size budgets.** Core (normalize + tokenize + stem) ≤ 5 KB gzipped; lexicon ≤ 15 KB. Enforced by `scripts/size.ts`.
 - **Don't break ZWNJ before the stemmer.** Snowball's Persian stemmer uses ZWNJ to find prefixes.
 - Stack: TypeScript, ESM, zero runtime deps, vitest, `tsc`, Node 22+. No Rust except in the upstream Pagefind PR.

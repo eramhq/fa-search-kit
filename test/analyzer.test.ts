@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createAnalyzer, normalize, Stemmer, tokenize } from "../src/index.ts";
-import { lexicon } from "../src/lexicon/index.ts";
+import { createLexicon, lexicon } from "../src/lexicon/index.ts";
 
 const Z = "‌";
 const light = createAnalyzer({ profile: "light" });
@@ -115,6 +115,11 @@ describe("variants analyze like their canonical form", () => {
     expect(q(full, "نمی‌کند")).toEqual(["نکرد"]);
     expect(q(full, "نکرد")).toEqual(["نکرد"]);
     expect(q(createAnalyzer({ profile: "full", lexicon, negation: "merge" }), "نمی‌کند")).toEqual(["کرد"]);
+  });
+
+  it("full: joined «می» of a verb the lexicon lacks still matches its half-space spelling (rule fallback)", () => {
+    const noVerbs = createAnalyzer({ profile: "full", lexicon: createLexicon("", "مهمان", "کتب>کتاب") });
+    expect(q(noVerbs, "میکند")).toEqual(q(noVerbs, "می‌کند"));
   });
 
   it("full: broken plurals", () => {
