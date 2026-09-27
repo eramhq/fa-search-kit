@@ -12,8 +12,8 @@ export const FA_YEH = "ی"; // ی
 export const FA_KAF = "ک"; // ک
 
 /** Harakat, tanwin, shadda, sukun, superscript alef, hamza above/below marks. */
-export const DIACRITICS = /[ً-ٰٟ]/g;
-export const TATWEEL = /ـ/g;
+export const DIACRITICS = /[\u064B-\u065F\u0670]/g;
+export const TATWEEL = /\u0640/g;
 export const FA_DIGITS = "۰۱۲۳۴۵۶۷۸۹";
 export const AR_DIGITS = "٠١٢٣٤٥٦٧٨٩";
 

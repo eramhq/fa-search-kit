@@ -12,9 +12,19 @@ node bench/fetch.ts      # download pinned sources into bench/data/raw (~650 MB)
 node bench/vocab.ts      # attestation vocabulary from all raw sources (~45 s)
 node bench/corpus.ts     # sample the three corpora (20,000 docs each)
 node bench/queries.ts    # build known-item queries and their variants
-node bench/run.ts        # every engine × config; cached per run in bench/data/runs
-node bench/report.ts --name baseline   # bench/results/baseline.{md,json}
+node bench/run.ts        # main configs × engines; cached per run in bench/data/runs
+node bench/run.ts --config h8-keep,h2-zwnj   # experiment arms (and tuned) run only when named
+node bench/report.ts --split dev       # bench/results/report-dev.{md,json}
+node bench/compare.ts snowball fa-standard --split dev   # the gate, see below
+node bench/conflation.ts --configs snowball,fa-standard  # UD gold lemmas: under/over-stemming
+node bench/collisions.ts               # what each fold rule merges (vocabulary pairs)
+node bench/rejoin.ts                   # the tokenizer's rejoin rules on UD sentences
 ```
+
+The Phase 0 baseline (`results/baseline.md`) was run on the first query set
+(`MIN_PER_TYPE = 150`, before the dev/test split); its numbers are not comparable
+cell by cell with later reports. A cached run is used only if its query hash
+matches the current query files.
 
 `bench/data/` is gitignored: it holds CC BY-SA and other third-party text used for
 evaluation only (see CLAUDE.md, "License hygiene"). Everything in it is rebuilt from
@@ -65,6 +75,7 @@ does the engine still put it in the top 10?
 | plural-drop | page has a ها plural, searcher types the singular | «قیمت‌ها» → «قیمت» |
 | clitic-add | possessive clitic on the head noun (attested, ≥ 5 uses) | «کتاب» → «کتابش» |
 | verb-tense | news only: the title-final verb in another tense | «تحویل شد» → «تحویل می‌شود» |
+| verb-tense-ud | news only: the title-final verb in another form **with the same PerDT gold lemma** (preverb kept apart: دریافتن ≠ یافتن), attested; independent of Hazm and our conjugator, and covers perfect, passive and other forms it never makes | «رسید» → «رسیده‌اید» |
 | verb-negation | news only: the title-final verb negated | «بود» → «نبود» |
 | homophone | one letter swapped within ز ذ ض ظ / س ص ث / ت ط / ه ح / ق غ | «تحویل» → «طحویل» |
 | typo-adjacent | one letter replaced by its neighbour key on ISIRI 9147 (never the first letter) | «صنایع» → «صناسع» |
@@ -82,8 +93,8 @@ Rules that keep the variants honest:
   sources (1.4M word types). No generator tests a non-word.
 - A variant identical to the canonical query is dropped; each type only counts
   queries it really changes.
-- Rare types keep sampling extra ("supplementary") targets until they have 150
-  queries or the corpus runs out. Supplementary targets appear only in their own
+- Rare types keep sampling extra ("supplementary") targets until they have 300
+  queries or the corpus runs out (300, so each half of the split keeps ~150). Supplementary targets appear only in their own
   variant rows, never in the canonical row.
 - Everything is seeded (`SEED = 20260926`, plus a per-document, per-type sub-seed),
   so the query files are identical on every machine.
@@ -95,6 +106,11 @@ Rules that keep the variants honest:
 
 Engines: Pagefind 1.5.2 (real WASM search, run in Node through a fetch shim),
 Orama 3.1.18, MiniSearch 7.2.0, FlexSearch 0.8.212, Lunr 2.3.9 (+ lunr-languages 1.22.0).
+Since Phase 1 also `orama-exact`: Orama with every analyzed term ended by a sentinel,
+so a query term matches only itself. Orama's default looks every query term up as a
+prefix and sums the scores of all words it prefixes (verified in its code, RESEARCH.md
+§4); `orama-exact` shows what an adapter that switches that off would get. Same as
+`orama` for configs without an analyzer.
 Each indexes `title` and `body`, with a title boost of 2 where the engine has one
 (Pagefind weights `<h1>` itself).
 
@@ -103,8 +119,43 @@ Each indexes `title` and `body`, with a title boost of 2 where the engine has on
 | stock | engine defaults, as the README shows them |
 | tuned | the best the engine offers without extra code: its closest language option and typo tolerance. Orama `language: "arabic"` + `tolerance: 1`; MiniSearch `fuzzy: 0.2, prefix: true`; FlexSearch `tokenize: "forward"` + `suggest: true`; Lunr `lunr.ar`; Pagefind `forceLanguage: "ar"` |
 | snowball | the naive fix: split on non-letters, Snowball 3.1.1 Persian stemmer, same at index and query time; the engine only splits on whitespace |
+| fa-light | fa-search `profile: "light"`: normalize + tokenize (rejoin spaced affixes); madda-less spelling indexed too |
+| fa-standard | `profile: "standard"`: + Snowball with fa-search's fixes (closed-suffix split, joined «می» rule, derivational suffixes kept, compounds' parts and the other half-space spelling indexed) |
+| fa-full | `profile: "full"` + `fa-search/lexicon`: + verbs, keep list, clitics, broken plurals; verb lemmas for Pagefind and FlexSearch, tense-keeping stems for MiniSearch, Orama and Lunr (bench/results/experiments.md, H10) |
 
-Later phases add fa-search's own analyzer profiles as new configs.
+The Phase 1 experiment arms (H1–H10) are recorded in `results/experiments.md` with
+their exact options; their configs were removed once decided.
+
+## Dev/test split
+
+Every query of one target (canonical and all its variants) lands in the same half,
+by a hash of the base id (`lib/split.ts`). Tuning is judged on **dev**; the
+phase-end number is quoted from **test**, computed once.
+
+## The gate: `compare.ts`
+
+Per corpus × engine × variant type, paired on the same queries: an exact binomial
+McNemar test on found/lost, and a Wilcoxon signed-rank test on reciprocal rank
+(news recall sits near the ceiling for OR engines, so rank moves show first).
+Benjamini–Hochberg across every test in one comparison. A cell **blocks** only if
+q < .05 **and** recall or MRR drops by ≥ 2 points. It also reports an engine-free
+**coverage** metric (share of queries whose terms are all among the target
+document's terms), per-lemma macro recall for verb rows (a few verbs such as شد
+dominate them), and lists every query that went from found to lost. Output:
+`results/compare/<A>--<B>.<split>.md` (gitignored: it quotes query texts, which come
+from CC BY-SA titles); exit code 1 when a cell blocks.
+
+## Independent checks
+
+- `conflation.ts`: UD Persian-Seraji and PerDT (hand-checked lemmas, CC BY-SA,
+  evaluation only). Paice's under-stemming (UI: same-lemma form pairs left apart)
+  and over-stemming (OI: different-lemma pairs merged) indices, on gold lemmas and
+  on "verb families" (a verb's infinitive and participle lemmas folded into the
+  verb, which search wants merged). Raw Snowball is the baseline to improve on.
+- `collisions.ts`: vocabulary forms seen ≥ 50 times that a fold rule (or a config
+  over another) makes identical, for review by hand.
+- `rejoin.ts`: the rejoin rules on UD sentences, as written (every join is false)
+  and with half-spaces typed as spaces (how many joins come back), per affix.
 
 ## Metrics
 

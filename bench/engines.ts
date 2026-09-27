@@ -31,12 +31,19 @@ export interface Engine {
   build(docs: Doc[], config: Config): Promise<Searcher>;
 }
 
-/** Apply the config's analyzer to a doc (or return it unchanged). */
-function prepare(docs: Doc[], config: Config): Doc[] {
-  const a = config.analyzer;
-  return a ? docs.map((d) => ({ id: d.id, title: a.analyze(d.title).join(" "), body: a.analyze(d.body).join(" ") })) : docs;
+/** The analyzer for this engine: any-word engines may get their own (H10). */
+const analyzerOf = (config: Config, anyWord: boolean) => (anyWord && config.anyWordAnalyzer) || config.analyzer;
+
+/** Apply the config's analyzer to a doc (or return it unchanged), in index mode. */
+function prepare(docs: Doc[], config: Config, anyWord = false): Doc[] {
+  const a = analyzerOf(config, anyWord);
+  return a ? docs.map((d) => ({ id: d.id, title: a.analyze(d.title, "index").join(" "), body: a.analyze(d.body, "index").join(" ") })) : docs;
 }
-const prepareQuery = (q: string, config: Config) => (config.analyzer ? config.analyzer.analyze(q).join(" ") : q);
+/** Query mode: one term per token, because Pagefind and FlexSearch require every query word to match. */
+const prepareQuery = (q: string, config: Config, anyWord = false) => {
+  const a = analyzerOf(config, anyWord);
+  return a ? a.analyze(q, "query").join(" ") : q;
+};
 const whitespace = (text: string) => text.split(" ").filter(Boolean);
 
 const minisearch: Engine = {
@@ -46,38 +53,52 @@ const minisearch: Engine = {
       ? { tokenize: whitespace, processTerm: (t: string) => t }
       : {};
     const ms = new MiniSearch<Doc>({ fields: ["title", "body"], idField: "id", ...options });
-    ms.addAll(prepare(docs, config));
+    ms.addAll(prepare(docs, config, true));
     const searchOptions = { boost: { title: 2 }, ...(config.tuned ? { fuzzy: 0.2, prefix: true } : {}) };
     return {
       async search(q) {
-        return ms.search(prepareQuery(q, config), searchOptions).slice(0, TOP_K).map((r) => String(r.id));
+        return ms.search(prepareQuery(q, config, true), searchOptions).slice(0, TOP_K).map((r) => String(r.id));
       },
     };
   },
 };
 
-const orama: Engine = {
-  name: "orama",
-  async build(docs, config) {
-    const tokenizer = config.analyzer
-      ? { language: "english", normalizationCache: new Map(), tokenize: whitespace }
-      : config.tuned ? { language: "arabic" } : undefined;
-    const db: AnyOrama = create({
-      schema: { title: "string", body: "string" } as const,
-      ...(tokenizer ? { components: { tokenizer: tokenizer as never } } : {}),
-    });
-    await insertMultiple(db, prepare(docs, config), 5000);
-    return {
-      async search(q) {
-        const res = await oramaSearch(db, {
-          term: prepareQuery(q, config), properties: ["title", "body"], boost: { title: 2 }, limit: TOP_K,
-          ...(config.tuned ? { tolerance: 1 } : {}),
-        });
-        return res.hits.map((h) => String(h.id));
-      },
-    };
-  },
-};
+/**
+ * Orama looks each query term up as a prefix in its radix tree and sums the scores
+ * of every indexed word it prefixes (`exact: false`, the default; verified in
+ * components/index.js and trees/radix.js of 3.1.18). `exact: true` cannot switch it off
+ * for Persian: it post-filters with a JS `\b` regex, which never matches between
+ * Persian letters. `orama-exact` ends every analyzed term with a sentinel, so a term
+ * is only a prefix of itself: what a Phase 2 adapter could do. Analyzer configs only.
+ */
+const SENTINEL = "_";
+function oramaEngine(name: string, exactTerms: boolean): Engine {
+  return {
+    name,
+    async build(docs, config) {
+      const tokenizer = config.analyzer
+        ? { language: "english", normalizationCache: new Map(), tokenize: whitespace }
+        : config.tuned ? { language: "arabic" } : undefined;
+      const db: AnyOrama = create({
+        schema: { title: "string", body: "string" } as const,
+        ...(tokenizer ? { components: { tokenizer: tokenizer as never } } : {}),
+      });
+      const mark = (text: string) => (exactTerms && config.analyzer ? text.split(" ").filter(Boolean).map((t) => t + SENTINEL).join(" ") : text);
+      await insertMultiple(db, prepare(docs, config, true).map((d) => ({ ...d, title: mark(d.title), body: mark(d.body) })), 5000);
+      return {
+        async search(q) {
+          const res = await oramaSearch(db, {
+            term: mark(prepareQuery(q, config, true)), properties: ["title", "body"], boost: { title: 2 }, limit: TOP_K,
+            ...(config.tuned ? { tolerance: 1 } : {}),
+          });
+          return res.hits.map((h) => String(h.id));
+        },
+      };
+    },
+  };
+}
+const orama = oramaEngine("orama", false);
+const oramaExact = oramaEngine("orama-exact", true);
 
 const flexsearch: Engine = {
   name: "flexsearch",
@@ -112,7 +133,7 @@ const lunrEngine: Engine = {
       require("lunr-languages/lunr.ar")(lunr);
       lunrArLoaded = true;
     }
-    const prepared = prepare(docs, config);
+    const prepared = prepare(docs, config, true);
     const idx = lunr(function () {
       if (config.tuned) this.use((lunr as unknown as { ar: lunr.Builder.Plugin }).ar);
       if (config.analyzer) { this.pipeline.reset(); this.searchPipeline.reset(); }
@@ -123,7 +144,7 @@ const lunrEngine: Engine = {
     });
     return {
       async search(q) {
-        const text = escapeLunr(prepareQuery(q, config)).trim();
+        const text = escapeLunr(prepareQuery(q, config, true)).trim();
         if (!text) return [];
         try {
           return idx.search(text).slice(0, TOP_K).map((r) => r.ref);
@@ -190,4 +211,4 @@ const pagefindEngine: Engine = {
   },
 };
 
-export const ENGINES: Engine[] = [pagefindEngine, orama, minisearch, flexsearch, lunrEngine];
+export const ENGINES: Engine[] = [pagefindEngine, orama, minisearch, flexsearch, lunrEngine, oramaExact];

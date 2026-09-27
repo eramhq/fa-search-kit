@@ -115,6 +115,21 @@ realism audit of a sample of variants (Claude + luna), ان/ات plurals and com
 - **Deliverable:** a baseline report. This is the "how broken is it" evidence that makes the case for everything else and for the upstream PRs.
 
 ### Phase 1: Core analyzer (`src/`)
+
+**Status (2026-09-27): built and measured; not a clean pass of the gate.** Results:
+[bench/results/phase1.md](bench/results/phase1.md) (test split, computed once),
+decisions: [bench/results/experiments.md](bench/results/experiments.md). Profiles
+`light` / `standard` / `full` in `src/`, core 4.95 KB gz, lexicon 7.83 KB gz. Against
+Snowball, every target row rose (alef-madda FlexSearch 0–5 → 99–100, zwnj-join news
+Pagefind 67 → 100, zwnj-space news FlexSearch 8 → 99, heh-yeh FlexSearch 0–16 → 100,
+clitic-add FlexSearch 9–14 → 74–87, verb-tense news FlexSearch 12 → 93, digits → 100),
+and over-stemming fell (fa-standard below Snowball on UD in every view). Remaining
+blocking cells: Orama news ranking (its default prefix matching, verified in code; fix
+in the Phase 2 adapter), products zwnj-join MRR (the «قهوه‌ای»/«قهوهای» ambiguity), two
+Pagefind products typo cells (Phase 3). Claims tested: H1, H2, H3, H5, H7 and three
+found on the way (H5b spelling alternatives, H8 derivational suffixes, H10 verb lemmas
+per engine type). Still open: H4 (R1 minimums, needs a Snowball fork) and H6 (4-grams),
+negation precision (needs graded judgments), package name.
 - **`normalize(text)`** with an offset map, so search highlights still point at the original text:
   - Map ي/ى to ی, ك to ک, ة to ه, and fold ۀ/هٔ/ه‌ی.
   - Fold alef and hamza forms.

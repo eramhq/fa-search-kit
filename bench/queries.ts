@@ -18,7 +18,8 @@ import { CORPORA, loadCorpus, type CorpusName, type Doc } from "./corpus.ts";
 import { RAW } from "./fetch.ts";
 import { isArabicScript, rawTokens } from "./lib/persian.ts";
 import { rng, seedOf, shuffle } from "./lib/rng.ts";
-import { VARIANTS, type Ctx } from "./lib/variants.ts";
+import { loadTreebank } from "./lib/ud.ts";
+import { VARIANTS, type Ctx, type UdVerbs } from "./lib/variants.ts";
 import { Verbs } from "./lib/verbs.ts";
 import { loadVocab } from "./vocab.ts";
 import { readFileSync } from "node:fs";
@@ -30,6 +31,8 @@ export interface Query {
   target: string;
   type: string;
   subtype?: string;
+  /** Verb lemma changed by a verb variant (per-lemma averages). */
+  lemma?: string;
   text: string;
   /** Extra target sampled only to fill a rare variant type; excluded from the canonical control row. */
   supplement?: true;
@@ -41,8 +44,11 @@ const MAX_QUERY_WORDS = 5;
 const MAX_TITLE_HITS = 3;
 /** ...and at most this many documents contain them anywhere, so the query is answerable. */
 const MAX_TEXT_HITS = 50;
-/** Rare variant types (hamza, half-space) keep sampling targets until they reach this many queries. */
-const MIN_PER_TYPE = 150;
+/**
+ * Rare variant types (hamza, half-space) keep sampling targets until they reach this many queries.
+ * 300, so each half of the dev/test split (bench/lib/split.ts) keeps about 150.
+ */
+const MIN_PER_TYPE = 300;
 const SEED = 20260926;
 
 export function loadQueries(corpus: CorpusName): Query[] {
@@ -112,11 +118,46 @@ function canonicalQuery(corpus: CorpusName, doc: Doc, idx: Indexes, ctx: Ctx): {
   return { tokens: query, ...(verb !== undefined ? { verbIndex: order.indexOf(verb) } : {}) };
 }
 
+/**
+ * PerDT's affirmative verb forms grouped by gold lemma (see verb-tense-ud in
+ * lib/variants.ts). PerDT's lemma drops a preverb («دریافته» → یافت) but its
+ * OrigLemma keeps it («در#یافت»), so the group key is preverb + lemma: دریافتن is
+ * not a tense of یافتن. A form counts only if PerDT tags it VERB in most of its
+ * uses («ده» is mostly "ten").
+ */
+function perdtVerbs(): UdVerbs {
+  const lemmas = new Map<string, Set<string>>();
+  const uses = new Map<string, number>(), verbUses = new Map<string, number>();
+  for (const s of loadTreebank("perdt")) {
+    for (const w of s.words) {
+      uses.set(w.form, (uses.get(w.form) ?? 0) + 1);
+      if (w.upos !== "VERB" || /Polarity=Neg/.test(w.feats) || !w.lemma) continue;
+      verbUses.set(w.form, (verbUses.get(w.form) ?? 0) + 1);
+      const orig = /(?:^|\|)OrigLemma=([^|]+)/.exec(w.misc)?.[1]?.split("#") ?? [];
+      const preverb = orig.length === 2 && orig[0] !== w.lemma && orig[1] === w.lemma ? orig[0] : "";
+      const key = preverb ? `${preverb}+${w.lemma}` : w.lemma;
+      const set = lemmas.get(w.form) ?? new Set();
+      set.add(key);
+      lemmas.set(w.form, set);
+    }
+  }
+  const lemmaOf = new Map<string, string>();
+  const forms = new Map<string, string[]>();
+  for (const [form, set] of [...lemmas].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) {
+    if (set.size !== 1 || (verbUses.get(form) ?? 0) < 0.5 * (uses.get(form) ?? 0)) continue;
+    const lemma = [...set][0]!;
+    lemmaOf.set(form, lemma);
+    forms.set(lemma, [...(forms.get(lemma) ?? []), form]);
+  }
+  return { lemmaOf, forms };
+}
+
 if (import.meta.main) {
   mkdirSync(QUERY_DIR, { recursive: true });
   const vocab = loadVocab();
   const verbs = Verbs.load(new URL("hazm-verbs.dat", RAW));
   const stop = new Set(readFileSync(new URL("hazm-stopwords.dat", RAW), "utf8").split("\n").map((s) => s.trim()).filter(Boolean));
+  const udVerbs = perdtVerbs();
 
   for (const corpus of CORPORA) {
     const docs = await loadCorpus(corpus);
@@ -127,7 +168,7 @@ if (import.meta.main) {
     for (const doc of shuffle(rng(SEED), docs)) {
       const supplement = bases >= TARGETS_PER_CORPUS;
       if (supplement && VARIANTS.every(([type]) => type === "canonical" || (counts.get(type) ?? 0) >= MIN_PER_TYPE)) break;
-      const baseCtx: Ctx = { random: rng(seedOf(doc.id)), vocab, verbs, stop };
+      const baseCtx: Ctx = { random: rng(seedOf(doc.id)), vocab, verbs, stop, udVerbs };
       const canon = canonicalQuery(corpus, doc, idx, baseCtx);
       if (!canon) continue;
       const tokens = canon.tokens;
@@ -142,6 +183,7 @@ if (import.meta.main) {
         if (!v || (type !== "canonical" && v.text === canonical)) continue;
         found.push({
           id: `${base}/${type}`, corpus, base, target: doc.id, type, ...(v.subtype ? { subtype: v.subtype } : {}),
+          ...(v.lemma ? { lemma: v.lemma } : {}),
           text: v.text, ...(supplement ? { supplement: true as const } : {}),
         });
       }

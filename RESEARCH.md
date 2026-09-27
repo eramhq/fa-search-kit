@@ -114,7 +114,7 @@ No other new general-purpose Persian stemmers (2023–2026) were found.
 - Tokenizer accepts `stemmer`, `stopWords`, `stemmerSkipProperties`. https://raw.githubusercontent.com/oramasearch/orama/main/packages/orama/src/components/tokenizer/index.ts [verified]
 - **Bug**: the Arabic splitter regex is `/[^a-z0-9أ-ي]+/gim`. The range U+0623–U+064A leaves out پ چ ژ ک گ ی (all outside it), so those letters act as **separators**. https://raw.githubusercontent.com/oramasearch/orama/main/packages/orama/src/components/tokenizer/languages.ts [verified the regex, and by running Orama 3.1.18's tokenizer on 2026-09-26: `language: "arabic"` turns «کتاب‌های گوشی پژوهش چاپ یک» into `تاب, ها, وش, وهش, ا` (یک vanishes); only all-Arabic-letter words like «كتاب» survive]
 - **The default (English) tokenizer indexes no Persian at all**: its splitter is `/[^A-Za-zàèéìòóù0-9_'-]+/`, so the same sentence tokenizes to `[]`. [verified by running]. A stock Orama index over Persian text only matches Latin words and digits.
-- Ranking observation: with a whitespace tokenizer over Snowball stems, a query «کتاب هرداد» scores docs containing only «کتاب» (23.1) above the only doc containing the rare «هرداد» (7.3 alone), so the target misses the top 5. [verified: scores observed]. Cause **not verified**: probably Orama's default prefix matching summing scores over every indexed word starting with «کتاب». `exact: true` returned no hits at all, so it is not the switch for this. Look at it when writing the Orama adapter (Phase 2).
+- Ranking observation: with a whitespace tokenizer over Snowball stems, a query «کتاب هرداد» scores docs containing only «کتاب» (23.1) above the only doc containing the rare «هرداد» (7.3 alone), so the target misses the top 5. [verified: scores observed]. Cause **verified 2026-09-27** in 3.1.18's `dist/esm/components/index.js` (`search`) and `trees/radix.js` (`find`, `findAllWords`): with `exact: false` (the default) each query term is looked up as a **prefix** in the radix tree and `calculateResultScores` runs for every indexed word it prefixes, so the scores add up over «کتاب», «کتابخانه», «کتابها»… `exact: true` returned no hits because `methods/search-fulltext.js` then post-filters documents with `new RegExp("\\b" + term + "\\b")`, and JS `\b` never matches between Persian letters (they are not `\w`). Workaround for an adapter: end every analyzed term with a sentinel (`کتاب_`), so a term only prefixes itself (bench engine `orama-exact`). Every Phase 1 index-side addition (compound parts, other half-space spelling, madda-less spelling) blocked only on Orama for this reason.
 - Supports `mode: 'vector' | 'hybrid' | 'fulltext'` with `vector[N]` schema fields; `@orama/plugin-embeddings` uses TensorFlow.js. https://github.com/oramasearch/orama
 
 ### MiniSearch, FlexSearch, Lunr, Fuse.js
@@ -292,3 +292,26 @@ Sizes from the Hugging Face API, 2026-09-26 [verified]:
 - Ezafe ی and ۀ / هٔ / ه‌ی — no documented search best practice found.
 - Over-stemming pairs: ماهی (fish) ≠ ماه (moon/month).
 - Short words: short vowels aren't written, so use character-count minimums (Snowball's conclusion — still a hypothesis to test).
+
+---
+
+## 13. Found while building the Phase 1 analyzer (2026-09-27)
+
+Snowball 3.1.1 Persian, more behaviours [verified by running `vendor/snowball/persian-stemmer.js`]:
+- Derivational suffixes are stripped in its suffix loop: «دستگاه» → «دست», «زندگی» / «زندگی‌اش» → «زند», «ماهیت» → «ماه», «سالانه» → «سال», «کارمند» → «کار». Its participle rule (ـته → ـت, ـده → ـد) also hits nouns: «هفته» → «هفت», «سده» → «سد», «دسته» → «دست», «خسته» → «خست», «خانواده» → «خانواد».
+- Person endings come off only after a present prefix, and R1 (`p1 = 3`) blocks 3-letter results, so «می‌کند» → «کند» but «می‌کنند» → «کنن», «می‌روم» → «روم»; unprefixed «رفتند», «کردند» stay whole; «کتاب‌هایش» stays whole; «کتاب‌هایمان» → «کتابه».
+- «میدان» → «مید», «میهمان» → «میهم», «مهمان» → «مهم», «آرمان» → «آرم».
+- It folds U+06C1 but not ۀ (U+06C0) or the hamza-above mark in «نامهٔ».
+
+UD Persian treebanks (pinned in `bench/fetch.ts`: Seraji `b7029568`, PerDT `a920904a`) [verified by reading the CoNLL-U]:
+- Clitics are split as multiword tokens («ماتمش» = ماتم + ش; 6,508 in PerDT train, 1,117 in Seraji train).
+- PerDT verb lemmas are the past stem, with `OrigLemma=past#present` in MISC; for prefixed verbs `OrigLemma=preverb#past` («دریافته»: lemma یافت, OrigLemma در#یافت).
+- Seraji lemmatizes the passive/light «شد», «می‌شود» as «کرد».
+- Both give infinitives («کردن») and participles used as adjectives («کردهٔ» → «کرده») lemmas of their own, and lemma labels carry spelling noise («برنامهٔ» vs «برنامه», trailing ZWNJ, «اولِ»).
+- Both write affixes with a half-space: on 35,104 sentences the rejoin rules make 42 joins across real spaces, and restore 98–100% of each affix's half-spaces when those are typed as spaces (`bench/results/rejoin.md`).
+
+Hazm `verbs.dat` (MIT, rev `a399c829`) [verified]:
+- 692 `past#present` lines (one is `#هست`). 321 pairs have fewer than 20 uses of all their conjugated forms in the 1.4M-type benchmark vocabulary (mostly archaic: «آژیرید», «فرجامید»); some are not verbs in use at all («تولید#تول» makes «تولد» a verb form, «هشت», «سود», «ستاد» as past stems).
+- `بود#است` lists «است» as a present stem, so «بیست» parses as ب + است.
+- Shared present stems: کن → کرد/کند, کار → کاشت/کشت, بر → برد/برید, مان → ماند/مانست/مانید, شو → شد/شست.
+- Its `words.dat` was not used: whether it derives from Bijankhan (GPL) is unchecked.

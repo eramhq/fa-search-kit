@@ -28,6 +28,10 @@ const WIKI_REV = "b04c8d1ceb2f5cd4588862100d08de323dccfbaa";
 const DIGIKALA_REV = "89c3133b169c8d3793db8834f56f32fee33d9db0";
 const PN_REV = "d023c3f4133f08aed2ce57d28469275a93c9166c";
 const HAZM_REV = "a399c8293c5165544aaef76ead78bda9f4275888";
+/** UD treebanks, master = release 2.16 line; pinned commits (2026-09-27). */
+const SERAJI_REV = "b7029568b3d45833f6b1ca9b088a6c8a8778ecd2";
+const PERDT_REV = "a920904a0911822e555602fddfda3c459e22d601";
+const UD = "https://raw.githubusercontent.com/UniversalDependencies";
 
 export const SOURCES: Source[] = [
   {
@@ -60,6 +64,20 @@ export const SOURCES: Source[] = [
     license: "MIT",
     note: "Hazm stop words",
   },
+  ...(["train", "dev", "test"] as const).flatMap((split): Source[] => [
+    {
+      file: `ud/fa_seraji-ud-${split}.conllu`,
+      url: `${UD}/UD_Persian-Seraji/${SERAJI_REV}/fa_seraji-ud-${split}.conllu`,
+      license: "CC BY-SA 4.0 (evaluation only)",
+      note: "UD Persian-Seraji: hand-checked lemmas; conflation and rejoin checks",
+    },
+    {
+      file: `ud/fa_perdt-ud-${split}.conllu`,
+      url: `${UD}/UD_Persian-PerDT/${PERDT_REV}/fa_perdt-ud-${split}.conllu`,
+      license: "CC BY-SA 4.0 (evaluation only)",
+      note: "UD Persian-PerDT: hand-checked lemmas (verbs: past stem); conflation, rejoin and verb-tense-ud",
+    },
+  ]),
 ];
 
 async function download(url: string, dest: URL): Promise<void> {
@@ -73,7 +91,7 @@ function sha256(path: URL): string {
 }
 
 if (import.meta.main) {
-  mkdirSync(RAW, { recursive: true });
+  mkdirSync(new URL("ud/", RAW), { recursive: true });
   const manifest: Record<string, Source & { sha256: string }> = {};
   for (const source of SOURCES) {
     const dest = new URL(source.file, RAW);

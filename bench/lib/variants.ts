@@ -22,11 +22,22 @@ export interface Ctx {
   stop: Set<string>;
   /** Index of the title-final verb in the query tokens, when the query has one (news only). */
   verbIndex?: number;
+  /** PerDT verb forms by gold lemma, for the Hazm-independent verb-tense-ud variant. */
+  udVerbs?: UdVerbs;
+}
+
+export interface UdVerbs {
+  /** Affirmative verb form → its PerDT lemma, for forms with exactly one lemma. */
+  lemmaOf: Map<string, string>;
+  /** Lemma → its affirmative forms. */
+  forms: Map<string, string[]>;
 }
 
 export interface Variant {
   text: string;
   subtype?: string;
+  /** The verb lemma a verb variant changed, for per-lemma averages. */
+  lemma?: string;
 }
 
 export type Generator = (tokens: string[], ctx: Ctx) => Variant | null;
@@ -82,11 +93,11 @@ const hamza: Generator = (tokens, ctx) => {
 
 /** Heh + ezafe/yeh: ۀ, هٔ, ه\u200Cی, and plain ه are used interchangeably. */
 const hehYeh: Generator = (tokens, ctx) => {
-  const forms = ["ه", "هٔ", "ه\u200Cی", "ۀ"];
-  const marked = tokens.findIndex((t) => /ۀ|هٔ/.test(t));
+  const forms = ["ه", "ه\u0654", "ه\u200Cی", "ۀ"];
+  const marked = tokens.findIndex((t) => /ۀ|ه\u0654/.test(t));
   if (marked >= 0) {
     const t = tokens[marked]!;
-    const from = t.includes("ۀ") ? "ۀ" : "هٔ";
+    const from = t.includes("ۀ") ? "ۀ" : "ه\u0654";
     const to = pick(ctx.random, forms.filter((f) => f !== from));
     return { text: join(replaceAt(tokens, marked, t.replace(from, to))), subtype: `${from}>${to}` };
   }
@@ -196,9 +207,30 @@ const verbTense: Generator = (tokens, ctx) => {
   for (const target of shuffle(ctx.random, TARGETS)) {
     if (target.tense === v.form.tense || (v.form.tense === "participle" && target.tense === "past")) continue;
     const out = ctx.verbs.generate(v.form.past, v.form.present, target.tense, target.person, false);
-    if (out && attested(ctx, out)) return { text: join(replaceAt(tokens, v.i, out)), subtype: `${v.form.tense}>${target.name}` };
+    if (out && attested(ctx, out)) {
+      return { text: join(replaceAt(tokens, v.i, out)), subtype: `${v.form.tense}>${target.name}`, lemma: `${v.form.past}#${v.form.present}` };
+    }
   }
   return null;
+};
+
+/**
+ * The same verb in another attested form, taken from the PerDT treebank's gold
+ * lemmas instead of from Hazm's stem list and our conjugator. It is the check
+ * that verb results are not an artefact of the generator and the lexicon both
+ * using Hazm: it brings perfect, passive, future and other forms `conjugate()`
+ * never makes («گفته», «خواهد», «شده»). Affirmative forms only (negation has its
+ * own row); ZWNJ-only differences are left to the zwnj rows.
+ */
+const verbTenseUd: Generator = (tokens, ctx) => {
+  if (ctx.verbIndex === undefined || !ctx.udVerbs) return null;
+  const token = tokens[ctx.verbIndex]!;
+  const lemma = ctx.udVerbs.lemmaOf.get(token);
+  if (!lemma) return null;
+  const bare = (w: string) => w.replaceAll(ZWNJ, "");
+  const options = (ctx.udVerbs.forms.get(lemma) ?? []).filter((f) => bare(f) !== bare(token) && attested(ctx, f));
+  if (!options.length) return null;
+  return { text: join(replaceAt(tokens, ctx.verbIndex, pick(ctx.random, options))), lemma };
 };
 
 /** The searcher types the negative form. Snowball keeps نمی/ن to avoid merging opposites. */
@@ -206,7 +238,7 @@ const verbNegation: Generator = (tokens, ctx) => {
   const v = finalVerb(tokens, ctx);
   if (!v || v.form.negative) return null;
   const out = ctx.verbs.generate(v.form.past, v.form.present, v.form.tense, v.form.person, true);
-  return out && attested(ctx, out) ? { text: join(replaceAt(tokens, v.i, out)), subtype: v.form.tense } : null;
+  return out && attested(ctx, out) ? { text: join(replaceAt(tokens, v.i, out)), subtype: v.form.tense, lemma: `${v.form.past}#${v.form.present}` } : null;
 };
 
 // --- Typos -------------------------------------------------------------------
@@ -327,6 +359,7 @@ export const VARIANTS: [string, Generator][] = [
   ["plural-drop", pluralDrop],
   ["clitic-add", cliticAdd],
   ["verb-tense", verbTense],
+  ["verb-tense-ud", verbTenseUd],
   ["verb-negation", verbNegation],
   ["homophone", homophone],
   ["typo-adjacent", typoAdjacent],

@@ -27,7 +27,7 @@ describe("helpers", () => {
     expect(isArabicScript("کتاب")).toBe(true);
   });
   it("standardTyping folds Arabic letters and drops diacritics", () => {
-    expect(standardTyping("كتابٌ عربي")).toBe("کتاب عربی");
+    expect(standardTyping("كتاب\u064C عربي")).toBe("کتاب عربی");
   });
 });
 
