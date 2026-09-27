@@ -26,7 +26,8 @@ Explanations from maintainers ("X can't be done because Y") are hypotheses.
 - **What it does** [verified, from the .sbl, the description page and the generated JS]:
   - Normalizes Arabic letters: ك→ک, ي→ی, ة→ه, أ/إ→ا, ؤ→و.
   - Removes ZWJ. Keeps ZWNJ only to detect prefixes, then deletes it. So our normalizer must **not** strip ZWNJ before calling it.
-  - Prefixes: strips می only when a ZWNJ follows it. Two sources disagree on نمی: the stemming research reported "نمی is kept"; the JS-ecosystem research reported "strips می‌/نمی‌". **Check against the code.** ن and ب are kept; نا-/بی- are kept.
+  - Prefixes: strips می only when a ZWNJ follows it. **نمی‌ is detected but kept** (it sets the verb flag, then `hop 2` without `delete`); the earlier "strips می‌/نمی‌" summary was wrong. ن and ب are kept; نا-/بی- are kept. [verified in `algorithms/persian.sbl` at v3.1.1, routine `Prefixes`, 2026-09-26]
+  - Observed outputs of the generated JS (3.1.1) [verified by running it]: کتاب‌ها/کتابها → کتاب; می‌روم → روم but **میروم → میروم** (no ZWNJ, no prefix strip); **نمی‌روم → نمیرو**; كتاب → کتاب; ماهی → ماهی; ایران, زمان unchanged; **کتاب‌مان → کتابم**; دانشجویان → دانشجو; بهترین → بهتر.
   - Suffixes: plurals (ها، ان with an exception list such as ایران/تهران، ات، ین، یان، گان), ام/اش, تر/ترین, derivational endings (گاه، بان، گی، انه، مند…), verb person endings when a verb cue is present. Has a lexical guard for words ending in ـان.
   - **Does not strip مان/تان/شان**: "without a lexicon we cannot distinguish the two cases" (clash with the ان plural).
   - No present→past verb stem mapping (رو→رفت), no Arabic broken plurals.
@@ -42,7 +43,7 @@ Explanations from maintainers ("X can't be done because Y") are hypotheses.
   - No official Snowball npm package. `snowball-stemmers` 0.6.0 is a 2016 port. `@orama/stemmers` 3.1.18 bundles Snowball output. https://registry.npmjs.org/snowball-stemmers
 - **Rust**: already compiled in SeekStorm `snowball-stemmers-rs` (MIT). https://github.com/SeekStorm/snowball-stemmers-rs . `rust-stemmers` is stale (last release 1.2.0, 2019). https://github.com/CurrySoftware/rust-stemmers
 - **Snowball test data for Persian**: Persian Wikipedia word list, CC BY-SA 3.0. https://github.com/snowballstem/snowball-data/tree/main/persian
-- **Snowball license**: BSD-3 [summary; the license page itself was not opened this session].
+- **Snowball license**: BSD-3-Clause [verified: `COPYING` at tag v3.1.1]. Vendored in `vendor/snowball/` (generated from tag v3.1.1, commit `cd195b51`; see its README).
 
 ### Contributing to Snowball
 From https://github.com/snowballstem/snowball/blob/master/CONTRIBUTING.rst [verified]:
@@ -94,6 +95,8 @@ No other new general-purpose Persian stemmers (2023–2026) were found.
   - Splits only on ASCII punctuation and whitespace.
   - Runs NFD and drops combining marks, so Arabic harakat get stripped.
   - No explicit ZWNJ (U+200C) or tatweel handling; no ي→ی or ك→ک. ZWNJ probably stays inside the token (**inference, test it**).
+  - **Tested 2026-09-26** (Pagefind 1.5.2, `forceLanguage: "fa"`, real WASM search run in Node) [verified by running a probe through `bench/engines.ts`; probe script not kept]: «کتاب‌های», «کتابهای» and «کتاب های» all find a page titled «کتاب‌های قدیمی»; «ابشار» finds «آبشار»; «تاثیر»/«موسسه» find «تأثیر مؤسسه» (so آ/أ/ؤ fold, consistent with NFD + mark removal); «نیمهشب» and «نیمه‌شب» find «نیمه شب». **Arabic «ديگري» does not find «دیگری»**: no yeh/kaf folding. Mechanism behind the ZWNJ/joined matches not read in the code.
+  - Pagefind search runs in Node: import the generated `pagefind.js`, call `options({ basePath, noWorker: true })`, and serve the bundle through a `fetch` override that reads files from disk (`bench/engines.ts`). No browser needed for the benchmark. [verified]
   - https://raw.githubusercontent.com/Pagefind/pagefind/main/pagefind/src/fossick/splitting.rs
 - **Hidden elements are indexed.** `parser.rs` only drops head, style, script, noscript, label, form, svg, footer, nav, iframe, template. It doesn't check `hidden`, `aria-hidden` or CSS. https://raw.githubusercontent.com/Pagefind/pagefind/main/pagefind/src/fossick/parser.rs [verified]
 - **Extension points** [verified]:
@@ -109,13 +112,18 @@ No other new general-purpose Persian stemmers (2023–2026) were found.
 ### Orama
 - Stemmers in `packages/stemmers/lib` are Snowball-generated (ar, ne, …); **no fa**. https://github.com/oramasearch/orama/tree/main/packages/stemmers/lib [verified]
 - Tokenizer accepts `stemmer`, `stopWords`, `stemmerSkipProperties`. https://raw.githubusercontent.com/oramasearch/orama/main/packages/orama/src/components/tokenizer/index.ts [verified]
-- **Bug**: the Arabic splitter regex is `/[^a-z0-9أ-ي]+/gim`. The range U+0623–U+064A leaves out پ چ ژ ک گ ی (all outside it), so those letters act as **separators**. https://raw.githubusercontent.com/oramasearch/orama/main/packages/orama/src/components/tokenizer/languages.ts [verified the regex; the effect on real Persian text is by reasoning, **test it**]
+- **Bug**: the Arabic splitter regex is `/[^a-z0-9أ-ي]+/gim`. The range U+0623–U+064A leaves out پ چ ژ ک گ ی (all outside it), so those letters act as **separators**. https://raw.githubusercontent.com/oramasearch/orama/main/packages/orama/src/components/tokenizer/languages.ts [verified the regex, and by running Orama 3.1.18's tokenizer on 2026-09-26: `language: "arabic"` turns «کتاب‌های گوشی پژوهش چاپ یک» into `تاب, ها, وش, وهش, ا` (یک vanishes); only all-Arabic-letter words like «كتاب» survive]
+- **The default (English) tokenizer indexes no Persian at all**: its splitter is `/[^A-Za-zàèéìòóù0-9_'-]+/`, so the same sentence tokenizes to `[]`. [verified by running]. A stock Orama index over Persian text only matches Latin words and digits.
+- Ranking observation: with a whitespace tokenizer over Snowball stems, a query «کتاب هرداد» scores docs containing only «کتاب» (23.1) above the only doc containing the rare «هرداد» (7.3 alone), so the target misses the top 5. [verified: scores observed]. Cause **not verified**: probably Orama's default prefix matching summing scores over every indexed word starting with «کتاب». `exact: true` returned no hits at all, so it is not the switch for this. Look at it when writing the Orama adapter (Phase 2).
 - Supports `mode: 'vector' | 'hybrid' | 'fulltext'` with `vector[N]` schema fields; `@orama/plugin-embeddings` uses TensorFlow.js. https://github.com/oramasearch/orama
 
 ### MiniSearch, FlexSearch, Lunr, Fuse.js
 - **MiniSearch 7.2**: `tokenize(text, field)` and `processTerm(term, field)`, separately overridable under `searchOptions`. Nothing Persian. https://github.com/lucaong/minisearch
 - **FlexSearch 0.8.2**: `Encoder` with `addMapper`, `addReplacer`, `addStemmer`, `addFilter`, `normalize`/`prepare`/`finalize`. Language packs only en, de, fr. Arabic charset supported, no Persian/Arabic pack. https://github.com/nextapps-de/flexsearch
 - **lunr-languages** (npm 1.22.0): has ar and he, **no fa**. Adding one needs a stemmer, a stop-word file and tests. https://github.com/MihaiValentin/lunr-languages , https://raw.githubusercontent.com/MihaiValentin/lunr-languages/master/CONTRIBUTING.md
+- **Stock Lunr drops every Persian word** [verified in `lunr.js` 2.3.9 and by running]: `lunr.trimmer` is `s.replace(/^\W+/, '').replace(/\W+$/, '')`, and JS `\W` matches every non-ASCII letter, so «کتاب» trims to "". Only Latin words and digits get indexed.
+- **`lunr.ar` mangles Persian** [verified in `lunr.ar.js` and by running]: its word characters are `\u0621-\u065b\u0671\u0640`, which leaves out ک گ ی پ چ ژ, so its trimmer cuts them off word edges: «کتاب» → «تاب», «گوشی» → «وش», «سامسونگ» → «سامسون» (stemmed «سامس»). Same bug class as Orama's Arabic splitter; an upstream fix candidate.
+- **FlexSearch 0.8.212 defaults** [observed by running]: a multi-word query returns only docs matching every word (one unmatched word → no results; `suggest: true` relaxes it). The default encoder splits on ZWNJ: «کتاب‌ها» and «کتاب ها» match each other, «کتابها» does not. Arabic «گوشي» does not match «گوشی».
 - **Fuse.js**: `ignoreDiacritics` and `getFn`, no tokenizer hook. https://github.com/krisk/Fuse/pull/773 . Current version not confirmed (docs URL 404).
 
 ---
@@ -172,14 +180,21 @@ No other new general-purpose Persian stemmers (2023–2026) were found.
 
 ## 7. Keyboard layouts
 
-- **ISIRI 9147** (standard) base layer on US QWERTY [summary, from Wikipedia; verify against kbdlayout.info before shipping]:
+- **Full tables now in `bench/lib/keyboards.ts`** (all 47 keys, base and shift, per layout), generated from the layout data, not typed by hand. Findings from building them (2026-09-26):
+  - **ISIRI 9147 / Windows "Persian (Standard)" (kbdfar.dll, KLID 00050429)** [verified]: sources agree on every letter: kbdlayout.info KLC export of kbdfar.dll 10.0.29667.1000, the ISIRI 9147 PDF (table 1, pp. 17–19, persian-computing.org), xkeyboard-config `symbols/ir(pes)`, and macOS "Persian – Standard". Windows departs from the standard on three shifted keys (Shift+` → ZWJ, Shift+4 → the four letters «ریال», Shift+X → ط). `d` → ی U+06CC, `;` → ک U+06A9; Arabic ي on Shift+D, Arabic ك on Shift+Z. ZWNJ on Shift+Space and Shift+B (and Ctrl+Shift+2 on Windows). kbdfar first shipped in Windows 8.
+  - **Windows legacy "Persian" (KBDFA.dll, KLID 00000429)** [verified]: still what Windows adds by default for Persian; one unchanged table from Server 2003 / XP x64 to Windows 10+. Differs from the standard: پ on `\`, ئ on `m`, ASCII digits. Emits Persian ی/ک on D/;, Arabic ي on Shift+X, no Arabic ك key. ZWNJ only on Ctrl+Shift+2, so it vanishes when typed on US. Sources: kbdlayout.info KLC, xkeyboard-config `ir(winkeys)`; one disagreement (Shift+B/N إ/أ swapped in xkb): the DLL wins.
+  - [summary] The Arabic ي/ك seen in the wild probably come from Shift+X, Arabic keyboards (e.g. iPhone) and the old Windows-1256 code page, not from the D and ; keys (2006 blog post, blog.behrang.net).
+  - **macOS 26.5.2** [verified via `UCKeyTranslate`]: three layouts. The system default for fa (`TISCopyInputSourceForLanguage("fa")`) is **"Persian – Standard"** (`Persian-ISIRI2901`), whose letters are **identical to ISIRI 9147** (only Shift+, and Shift+. swapped). **"Persian – Legacy"** (`com.apple.keylayout.Persian`) is Apple's own: ذ on c, د on v, ز on b, ر on n, و on m, ژ on /, پ on `. The benchmark uses `isiri9147`, `win-legacy` and `mac-legacy` (Mac Standard adds no new letters).
+  - [summary] github.com/sarabbafrani/persian-pc-mac mislabels layouts; don't trust its names.
+  - [estimate, not verified] which macOS release switched the default from Legacy to Standard; how many Iranian Mac users still use Legacy; whether Windows users type the half-space as Shift+Space or Shift+B.
+- ISIRI 9147 (standard) base layer on US QWERTY, as first noted [summary, now superseded by the verified tables above]:
   - Top row: q→ض w→ص e→ث r→ق t→ف y→غ u→ع i→ه o→خ p→ح
   - Home row: a→ش s→س d→ی f→ب g→ل h→ا j→ت k→ن l→م
   - Bottom row: z→ظ x→ط c→ز v→ر b→ذ n→د m→پ
   - ZWNJ is Shift+Space. Remaining keys (`[ ] ; ' , \``, shift layer) still to fill in; e.g. Triboon's `nd[d` → «دیجی» implies `[`→ج, and `;ta` → «کفش» implies `;`→ک.
   - https://en.wikipedia.org/wiki/ISIRI_9147 , https://persian-computing.org/wiki/Keyboard
 - **Windows**: legacy "Persian" (KBDFA) https://kbdlayout.info/KBDFA/ and "Persian (Standard)" (kbdfar) http://kbdlayout.info/kbdfar/ . The shift-state pages there have everything needed for full tables.
-- **macOS** default is based on the older ISIRI 2901; ز ذ د ر پ ئ sit in different places than on Windows standard. https://github.com/sarabbafrani/persian-pc-mac , https://groups.google.com/g/persian-computing/c/riGWQt5lNOY . No full key-by-key comparison obtained yet.
+- ~~macOS default is based on the older ISIRI 2901; ز ذ د ر پ ئ sit in different places than on Windows standard.~~ **Wrong for macOS 26**: the default "Persian – Standard" has ISIRI 9147's letters; the different arrangement is "Persian – Legacy" (see above). https://github.com/sarabbafrani/persian-pc-mac , https://groups.google.com/g/persian-computing/c/riGWQt5lNOY
 - **Wrong-layout detection elsewhere**:
   - Yandex Browser re-searches in the other layout if the first search fails. https://yandex.com/support/browser/en/search-and-browse/search.html
   - Punto Switcher (Yandex; `ghbdtn` → `привет`) uses dictionaries of "impossible" letter combinations built from millions of words [secondary]. https://grokipedia.com/page/Punto_Switcher , https://github.com/topics/punto-switcher
@@ -215,10 +230,16 @@ No other new general-purpose Persian stemmers (2023–2026) were found.
 | msmarco-fa | 8.84M passages (translated) | none on card | https://huggingface.co/datasets/MCINext/msmarco-fa |
 | Shiraz | 6.25M rows, LLM-made search queries | not checked | https://huggingface.co/datasets/shekar-ai/Shiraz |
 | Digikala (Kaggle) | product + comment dumps; **no query/relevance data** | not checked | https://www.kaggle.com/datasets/radeai/digikala-comments-and-products |
+| **Digikala products (HF mirror, used by the benchmark)** | 1,283,496 product titles with category/brand; 6 sub-categories (clothing 46%, books 27%, beauty 13%, toys 9%, food 3%, travel 2%); 14,478 titles contain Arabic ي/ك, 29,306 contain ZWNJ; no electronics | card says MIT (scraped from digikala.com): **evaluation only** | https://huggingface.co/datasets/RadeAI/Digikala_comments_products (rev `89c3133b`) |
+| **pn-summary (used by the benchmark)** | 93,207 unique news titles + articles from several agencies | card says MIT: evaluation only | https://huggingface.co/datasets/HooshvareLab/pn_summary (rev `d023c3f4`), arXiv:2012.11204 |
+| Persian Wikipedia (HF, used by the benchmark) | 2023-11-01 dump, 4 parquet shards; shard 0 has 244,968 articles, 39,497 of them ≥ 2,000 chars | CC BY-SA 3.0 / GFDL | https://huggingface.co/datasets/wikimedia/wikipedia (rev `b04c8d1c`) |
+| Digikala Magazine (MCINext) | blog articles with a topic label; title is not separated from the text | no license on card | https://huggingface.co/datasets/MCINext/digikala-magazine |
+| EhsanShahbazi/digikala-products | 265 MB parquet | MIT tag, but **gated** (login required) | https://huggingface.co/datasets/EhsanShahbazi/digikala-products |
 | digikala-mobile-expert-data (HF) | product data for RAG | not checked | https://huggingface.co/datasets/NavHash/digikala-mobile-expert-data |
 | Persian Wikipedia | corpus | CC BY-SA | dumps.wikimedia.org |
 
 - mMARCO itself has no Persian.
+- **Both spellings are common in published text**, so the index side already has the variants [verified: raw token counts over the full wiki shard + all pn-summary + all Digikala titles, `bench/data/vocab.tsv`, 2026-09-26]: رئیس 53,411 / رییس 9,876; تأثیر 14,395 / تاثیر 10,896; مؤسسه 10,564 / موسسه 4,283; کتاب‌ها 2,685 / کتابها 214; می‌رود 24,409 / میرود 300; گوشی‌های 1,769 / گوشیهای 10.
 - No real Digikala or Torob query logs are public.
 - "Flexicon": not found.
 - A Persian fashion-catalog hybrid search project (ES BM25 + multilingual embeddings) exists as a reference: https://github.com/mahsamb/persian-products-elasticsearch-kaggle

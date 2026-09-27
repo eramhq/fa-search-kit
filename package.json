@@ -1,0 +1,35 @@
+{
+  "name": "fa-search",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Persian search that works in JS, the browser and static sites.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "bench:fetch": "node bench/fetch.ts",
+    "bench:vocab": "node --max-old-space-size=16000 bench/vocab.ts",
+    "bench:corpus": "node --max-old-space-size=12000 bench/corpus.ts",
+    "bench:queries": "node bench/queries.ts",
+    "bench": "node bench/run.ts",
+    "bench:report": "node bench/report.ts --name baseline"
+  },
+  "devDependencies": {
+    "@orama/orama": "3.1.18",
+    "@types/lunr": "2.3.7",
+    "@types/node": "24.19.0",
+    "esbuild": "0.28.2",
+    "flexsearch": "0.8.212",
+    "hyparquet": "1.31.1",
+    "lunr": "2.3.9",
+    "lunr-languages": "1.22.0",
+    "minisearch": "7.2.0",
+    "pagefind": "1.5.2",
+    "typescript": "7.0.2",
+    "vitest": "5.0.2"
+  }
+}

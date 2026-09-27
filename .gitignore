@@ -1,0 +1,6 @@
+node_modules/
+dist/
+bench/data/
+bench/.cache/
+*.log
+.DS_Store

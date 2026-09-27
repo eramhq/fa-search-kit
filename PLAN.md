@@ -86,6 +86,20 @@ Rules that win go into our layers and upstream to Snowball, with the evidence at
 ## Phases (each gated by benchmark numbers)
 
 ### Phase 0: Benchmark first (`bench/`)
+
+**Status (2026-09-26): baseline done.** Harness, method and results: [bench/README.md](bench/README.md),
+[bench/results/README.md](bench/results/README.md) (findings), [bench/results/baseline.md](bench/results/baseline.md) (tables).
+Built: pinned fetch of Persian Wikipedia, pn-summary news and Digikala products (20k docs each,
+evaluation only); 36,746 seeded known-item queries over 22 variant types (morphological forms
+attested in 1.4M-type real text); Pagefind (real WASM, in Node), Orama, MiniSearch, FlexSearch,
+Lunr × stock / tuned / Snowball configs. Headline: stock Orama and Lunr index no Persian; the
+Arabic options of Orama and lunr-languages mangle پ چ ژ ک گ ی; Arabic ي/ك breaks every engine
+that does index Persian (1–19% recall on wiki); wrong keyboard layout finds nothing anywhere;
+Snowball fixes ي/ك, hamza and plurals but not آ, half-space-as-space, joined «میکند» (a regression
+on AND engines), ezafe, clitics or digits: Phase 1's target rows.
+Still open for Phase 0: graded relevance (precision, e.g. the negation hypothesis), an LLM
+realism audit of a sample of variants (Claude + luna), ان/ات plurals and compound splitting.
+
 - **Corpus:**
   - A Persian Wikipedia subset (CC BY-SA, evaluation only).
   - A product-title set: Digikala Kaggle dumps, after checking the license. Otherwise a synthetic catalog.
