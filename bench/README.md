@@ -21,6 +21,7 @@ node bench/collisions.ts               # what each fold rule merges (vocabulary 
 node bench/rejoin.ts                   # the tokenizer's rejoin rules on UD sentences
 node bench/excerpts.ts                 # Pagefind excerpts under the adapter (P1)
 node demo/build.ts && node demo/check.ts   # the demo site and its replay, headless
+node demo/browser-check.ts             # the demo page itself, in headless Chrome
 ```
 
 The Phase 0 baseline (`results/baseline.md`) was run on the first query set

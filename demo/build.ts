@@ -81,7 +81,7 @@ for (const corpus of ["wiki", "products"] as const) {
   for (const d of chosen) {
     const url = `/${corpus}/${d.id}/`;
     urls.set(d.id, url);
-    const body = `<header class="site"><a href="../../">جست‌وجوی فارسی: مقایسه</a> · ${src.label}</header>
+    const body = `<header class="site"><a href="../../">بازگشت به جست‌وجو</a> · ${src.label}</header>
 <main>
 <article data-pagefind-body>
 <h1>${esc(d.title)}</h1>

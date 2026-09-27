@@ -220,6 +220,7 @@ describe("pagefind", () => {
     expect(faPagefindIndex({ title: "fold" }).annotateHtml(own)).not.toContain("data-fa-title");
     const data = fa.processResult({ content: "", excerpt: "", meta: { title: "کتاب قدیمی", fa_title: "كتابهاي قديمي" } });
     expect(data.meta!.title).toBe("كتابهاي قديمي");
+    expect(data.meta).not.toHaveProperty("fa_title"); // Pagefind UI would list it under the result
   });
 
   it("annotateHtml: data-pagefind-body regions, ignored and skipped elements", () => {

@@ -92,7 +92,8 @@ export function faPagefind(options: AdapterOptions = {}): PagefindAdapter {
       if (result.content?.includes(OPEN)) result.excerpt = excerpt(result.content, query);
       for (const sub of result.sub_results ?? []) sub.excerpt = sub.excerpt.replace(HIDDEN, "");
       // The page's own title, when the index side ranked a normalized one (`title` option).
-      if (result.meta?.fa_title !== undefined) result.meta.title = result.meta.fa_title;
+      // Removed after use: Pagefind UI lists every other meta field under the result.
+      if (result.meta?.fa_title !== undefined) { result.meta.title = result.meta.fa_title; delete result.meta.fa_title; }
       return result;
     },
     excerpt,

@@ -36,7 +36,7 @@ for (const name of ["stock", "fa"] as const) {
         const shown = fa.processResult({ ...d, meta: { ...d.meta } }, q.text);
         const ex = shown.excerpt;
         // The displayed title is the page's own (the index side ranks its terms instead).
-        if (shown.meta.title === d.meta.fa_title && d.meta.fa_title) titles++;
+        if (d.meta.fa_title && shown.meta.title === d.meta.fa_title && !("fa_title" in shown.meta)) titles++;
         excerpts++;
         if (/[⁅⁆]/.test(ex)) soup++;
         if (ex.includes("<mark>")) marked++;

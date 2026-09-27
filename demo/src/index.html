@@ -3,52 +3,72 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>جست‌وجوی فارسی: Pagefind با و بدون fa-search-kit</title>
+<title>جست‌وجوی فارسی، همان‌طور که مردم می‌نویسند</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='13' cy='13' r='8' fill='none' stroke='%230E7C7B' stroke-width='4'/%3E%3Cpath d='M19 19l8 8' stroke='%230E7C7B' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@500;700&family=Vazirmatn:wght@400;500;700&display=swap">
 <link rel="stylesheet" href="./pagefind-fa/pagefind-ui.css">
 <link rel="stylesheet" href="./style.css">
 <script src="./pagefind-fa/pagefind-ui.js"></script>
 <script type="module" src="./app.js"></script>
 </head>
 <body>
-<header class="intro">
-  <h1>جست‌وجوی فارسی در یک سایت ایستا</h1>
-  <p>
-    دو جعبهٔ جست‌وجو، یک مجموعه صفحه (مقاله‌های ویکی‌پدیا و کالاهای دیجی‌کالا).
-    راست: <strong>Pagefind</strong> با تنظیمات پیش‌فرض. چپ: همان Pagefind با
-    <strong>fa-search-kit</strong>. هرچه در یکی بنویسید در دیگری هم جست‌وجو می‌شود.
+<header class="hero">
+  <h1>جست‌وجوی فارسی، همان‌طور که مردم می‌نویسند</h1>
+  <p class="lede">
+    یک سایت با ۶۰۰ صفحه (مقاله‌های ویکی‌پدیا و کالاهای دیجی‌کالا) و دو جست‌وجو روی آن:
+    Pagefind همان‌طور که هست، و Pagefind با <strong>fa-search-kit</strong>.
+    یک بار بنویسید، نتیجهٔ هر دو را کنار هم ببینید.
   </p>
-  <p class="try">امتحان کنید:
-    <button type="button" data-q="كتاب تاريخ">كتاب تاريخ (ي و ك عربی)</button>
-    <button type="button" data-q="کتابهای">کتابهای (بی‌نیم‌فاصله)</button>
-    <button type="button" data-q="می کند">می کند (فاصله به‌جای نیم‌فاصله)</button>
-    <button type="button" data-q="اسمان">اسمان (آ بی‌کلاه)</button>
-  </p>
+  <form class="search" role="search" onsubmit="return false">
+    <label for="q" class="visually-hidden">جست‌وجو</label>
+    <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="10" cy="10" r="6.5"/><path d="M15 15l6 6"/></svg>
+    <input id="q" type="search" autocomplete="off" spellcheck="false" placeholder="یک کلمه بنویسید، مثلاً کفش یا ایران">
+  </form>
+  <div class="examples">
+    <span class="examples-title">یا یکی از این‌ها را امتحان کنید:</span>
+    <ul>
+      <li><button type="button" data-q="كيف">كيف<small>با صفحه‌کلید عربی</small></button></li>
+      <li><button type="button" data-q="كفش">كفش<small>با صفحه‌کلید عربی</small></button></li>
+      <li><button type="button" data-q="کفش های مردانه">کفش های مردانه<small>با فاصله</small></button></li>
+      <li><button type="button" data-q="رمانهای">رمانهای<small>بدون نیم‌فاصله</small></button></li>
+      <li><button type="button" data-q="بچه ها">بچه ها<small>با فاصله</small></button></li>
+      <li><button type="button" data-q="فيلم">فيلم<small>با ي عربی</small></button></li>
+    </ul>
+  </div>
 </header>
-<main class="boxes">
-  <section>
-    <h2>Pagefind (پیش‌فرض)</h2>
+
+<main class="columns">
+  <section class="column stock" aria-labelledby="stock-title">
+    <h2 id="stock-title">Pagefind بدون تغییر</h2>
+    <p class="empty">نتیجه‌ها اینجا می‌آیند.</p>
     <div id="stock"></div>
   </section>
-  <section>
-    <h2>Pagefind + fa-search-kit</h2>
+  <section class="column fa" aria-labelledby="fa-title">
+    <h2 id="fa-title">Pagefind با fa-search-kit</h2>
+    <p class="empty">نتیجه‌ها اینجا می‌آیند.</p>
     <div id="fa"></div>
   </section>
 </main>
-<section class="replay">
-  <h2>بازپخش پرس‌وجوهای محک</h2>
+
+<section class="replay" aria-labelledby="replay-title">
+  <h2 id="replay-title">آزمون با جست‌وجوهای بیشتر</h2>
   <p>
-    پرس‌وجوهای نمونهٔ محک (<code>bench/</code>) که صفحهٔ هدفشان در این دمو هست، به
-    تفکیک نوع تغییر. «یافته» یعنی صفحهٔ هدف در ۱۰ نتیجهٔ اول آمده است.
+    عنوان صفحه‌ها را همان‌طور که مردم می‌نویسند بازنویسی کرده‌ایم: با صفحه‌کلید عربی،
+    بی‌نیم‌فاصله، جمع و مفرد، با ضمیر و… هر جست‌وجو یک صفحهٔ درست دارد؛ عدد جدول سهم
+    جست‌وجوهایی است که آن صفحه را در ۱۰ نتیجهٔ اول آورده‌اند.
   </p>
-  <p><button type="button" id="run-replay">اجرای بازپخش</button> <span id="replay-status"></span></p>
+  <p><button type="button" id="run-replay">اجرای آزمون</button> <span id="replay-status" aria-live="polite"></span></p>
   <table id="replay-table" hidden>
-    <thead><tr><th>نوع</th><th>تعداد</th><th>پیش‌فرض</th><th>fa-search-kit</th><th>نمونه‌ها (fa یافت، پیش‌فرض نه)</th></tr></thead>
+    <thead><tr><th scope="col">چطور نوشته شده</th><th scope="col">تعداد</th><th scope="col">بدون تغییر</th><th scope="col">با fa-search-kit</th><th scope="col">نمونه</th></tr></thead>
     <tbody></tbody>
   </table>
 </section>
+
 <footer>
-  متن‌ها از ویکی‌پدیای فارسی (CC BY-SA 3.0) و عنوان کالاهای دیجی‌کالا؛
-  <a href="./licence/">دربارهٔ داده‌ها و مجوز</a>. این دمو CC BY-SA است و جزو بستهٔ npm نیست.
+  متن مقاله‌ها از ویکی‌پدیای فارسی (CC BY-SA 3.0) و عنوان کالاها از دیجی‌کالا؛
+  <a href="./licence/">دربارهٔ داده‌ها و مجوز</a>. کد fa-search-kit با مجوز MIT است.
 </footer>
 </body>
 </html>

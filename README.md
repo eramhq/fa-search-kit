@@ -173,7 +173,8 @@ Typos and wrong keyboard layouts are not handled yet (query rescue is the next p
 `node demo/build.ts` builds a static site of 300 Persian Wikipedia articles and 300
 Digikala products with two search boxes side by side (stock Pagefind and Pagefind
 with fa-search-kit) and a replay of the benchmark's queries; `node demo/check.ts`
-runs the replay headless. It needs the benchmark data (`bench/README.md`). The
+runs the replay headless, and `node demo/browser-check.ts` clicks through the page in
+headless Chrome. It needs the benchmark data (`bench/README.md`). The
 demo quotes CC BY-SA text, so it is CC BY-SA and never part of the package.
 
 ## Data and licence

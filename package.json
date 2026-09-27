@@ -74,7 +74,8 @@
     "size": "node scripts/size.ts",
     "smoke:pack": "node scripts/smoke-pack.ts",
     "demo": "node demo/build.ts",
-    "demo:check": "node demo/check.ts"
+    "demo:check": "node demo/check.ts",
+    "demo:browser": "node demo/browser-check.ts"
   },
   "peerDependencies": {
     "@orama/orama": "^3.1.0",
