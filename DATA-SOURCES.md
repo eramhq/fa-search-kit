@@ -22,13 +22,14 @@ plural itself (مهمان‌ها → مهمان is a word, not مه + مان), a
 its positive, a «می» word's half-space spelling is never attested, and so on. The
 output is a list of ordinary dictionary words, not text from the sources.
 
-**Open decision (owner):** whether a word list chosen this way may ship under MIT.
-The usual view is that single words and the fact of their frequency are not
-copyrightable, but the counts come in part from CC BY-SA text. If that is not
-acceptable, the same rules can run over counts from an MIT/public-domain corpus
-instead; the lists would need rebuilding and the benchmark rerunning. Hazm's
-`words.dat` was deliberately not used: whether it derives from Bijankhan (GPL) is
-unchecked.
+**Decision (owner, 2026-09-27): these lists ship under MIT as they are.** They hold
+only single dictionary words, chosen by rules from how often words occur; no text from
+the sources is copied, and single words and the fact of their frequency are generally
+not copyrightable. The counts come in part from CC BY-SA text, so if a stricter reading
+is ever wanted (e.g. before a large public release), the same rules can run over counts
+from an MIT/public-domain corpus instead; the lists would then be rebuilt and the
+benchmark rerun. Hazm's `words.dat` was deliberately not used: whether it derives from
+Bijankhan (GPL) is unchecked.
 
 Evaluation-only data (never bundled): UD Persian-Seraji and PerDT (CC BY-SA 4.0),
 the benchmark corpora and queries under `bench/data/` (gitignored), and the demo site
