@@ -17,6 +17,6 @@
     "types": ["node"],
     "resolveJsonModule": true
   },
-  "include": ["src", "test", "scripts", "bench", "vendor/**/*.d.ts", "vitest.config.ts"],
-  "exclude": ["bench/data"]
+  "include": ["src", "test", "scripts", "bench", "demo", "vendor/**/*.d.ts", "vitest.config.ts"],
+  "exclude": ["bench/data", "demo/dist"]
 }

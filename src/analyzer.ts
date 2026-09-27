@@ -76,7 +76,7 @@ function parts(token: string): string[] {
 
 export function createAnalyzer(options: AnalyzerOptions = {}): Analyzer {
   const profile = options.profile ?? "standard";
-  if (profile === "full" && !options.lexicon) throw new Error('profile "full" needs a lexicon: import { lexicon } from "fa-search/lexicon"');
+  if (profile === "full" && !options.lexicon) throw new Error('profile "full" needs a lexicon: import { lexicon } from "fa-search-kit/lexicon"');
   // Defaults are the experiments' decisions (bench/results/experiments.md).
   const stemming = profile !== "light";
   const alef = options.alefMadda ?? true; // H7

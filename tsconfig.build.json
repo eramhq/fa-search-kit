@@ -1,0 +1,16 @@
+{
+  // The package build: dist/src (JS + .d.ts). Relative .ts imports become .js
+  // (rewriteRelativeImportExtensions, from tsconfig.json). The vendored Snowball
+  // stemmer is copied to dist/vendor/snowball by `npm run build`, not compiled:
+  // its Closure-style JSDoc does not type-check, and its .d.ts is hand-written.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "declaration": true,
+    "rootDir": ".",
+    "outDir": "dist",
+    "types": ["node"]
+  },
+  "include": ["src"],
+  "exclude": []
+}

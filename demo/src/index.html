@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>جست‌وجوی فارسی: Pagefind با و بدون fa-search-kit</title>
+<link rel="stylesheet" href="./pagefind-fa/pagefind-ui.css">
+<link rel="stylesheet" href="./style.css">
+<script src="./pagefind-fa/pagefind-ui.js"></script>
+<script type="module" src="./app.js"></script>
+</head>
+<body>
+<header class="intro">
+  <h1>جست‌وجوی فارسی در یک سایت ایستا</h1>
+  <p>
+    دو جعبهٔ جست‌وجو، یک مجموعه صفحه (مقاله‌های ویکی‌پدیا و کالاهای دیجی‌کالا).
+    راست: <strong>Pagefind</strong> با تنظیمات پیش‌فرض. چپ: همان Pagefind با
+    <strong>fa-search-kit</strong>. هرچه در یکی بنویسید در دیگری هم جست‌وجو می‌شود.
+  </p>
+  <p class="try">امتحان کنید:
+    <button type="button" data-q="كتاب تاريخ">كتاب تاريخ (ي و ك عربی)</button>
+    <button type="button" data-q="کتابهای">کتابهای (بی‌نیم‌فاصله)</button>
+    <button type="button" data-q="می کند">می کند (فاصله به‌جای نیم‌فاصله)</button>
+    <button type="button" data-q="اسمان">اسمان (آ بی‌کلاه)</button>
+  </p>
+</header>
+<main class="boxes">
+  <section>
+    <h2>Pagefind (پیش‌فرض)</h2>
+    <div id="stock"></div>
+  </section>
+  <section>
+    <h2>Pagefind + fa-search-kit</h2>
+    <div id="fa"></div>
+  </section>
+</main>
+<section class="replay">
+  <h2>بازپخش پرس‌وجوهای محک</h2>
+  <p>
+    پرس‌وجوهای نمونهٔ محک (<code>bench/</code>) که صفحهٔ هدفشان در این دمو هست، به
+    تفکیک نوع تغییر. «یافته» یعنی صفحهٔ هدف در ۱۰ نتیجهٔ اول آمده است.
+  </p>
+  <p><button type="button" id="run-replay">اجرای بازپخش</button> <span id="replay-status"></span></p>
+  <table id="replay-table" hidden>
+    <thead><tr><th>نوع</th><th>تعداد</th><th>پیش‌فرض</th><th>fa-search-kit</th><th>نمونه‌ها (fa یافت، پیش‌فرض نه)</th></tr></thead>
+    <tbody></tbody>
+  </table>
+</section>
+<footer>
+  متن‌ها از ویکی‌پدیای فارسی (CC BY-SA 3.0) و عنوان کالاهای دیجی‌کالا؛
+  <a href="./licence/">دربارهٔ داده‌ها و مجوز</a>. این دمو CC BY-SA است و جزو بستهٔ npm نیست.
+</footer>
+</body>
+</html>

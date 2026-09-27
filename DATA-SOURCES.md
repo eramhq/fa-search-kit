@@ -31,4 +31,6 @@ instead; the lists would need rebuilding and the benchmark rerunning. Hazm's
 unchecked.
 
 Evaluation-only data (never bundled): UD Persian-Seraji and PerDT (CC BY-SA 4.0),
-the benchmark corpora and queries under `bench/data/` (gitignored).
+the benchmark corpora and queries under `bench/data/` (gitignored), and the demo site
+built from them by `demo/build.ts` (`demo/dist/`, gitignored; CC BY-SA, credited on
+every page). The adapters (`src/adapters/`) contain no data.

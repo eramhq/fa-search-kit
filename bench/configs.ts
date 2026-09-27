@@ -12,8 +12,13 @@
  *             (3.1.1), and feed the engine the stems at index and query time.
  *             This is the bar Phase 1's analyzer has to clear.
  *
- * - fa-light / fa-standard / fa-full: fa-search's own analyzer profiles (src/).
- * - experiment arms (H1–H10, bench/results/experiments.md): fa-* with one option
+ * - fa-light / fa-standard / fa-full: fa-search-kit's profiles, set up **through the
+ *   shipped adapters** (src/adapters/), as a site would: each engine gets the
+ *   adapter's tokenizer / encoder / plugin, Pagefind gets annotated HTML.
+ * - p1-light / p1-standard / p1-full: the same profiles through Phase 1's bench
+ *   wiring (pre-analyzed text, engine processing off); the Phase 2 gate's baseline.
+ *   Their runs are Phase 1's fa-* runs, copied (bench/results/phase2.md).
+ * - experiment arms (H1–H10, P1–P4, bench/results/experiments.md): one option
  *   changed; run only when named. Each arm was run against the profile defaults
  *   of its time (the base named in experiments.md); the defaults have since moved
  *   to the winners, so re-running an arm now measures something slightly different.
@@ -41,9 +46,27 @@ export interface Analyzer {
   analyze(text: string, mode: Mode): string[];
 }
 
+/** An adapter setup: analyzer options, plus the adapter options an experiment varies. */
+export interface FaSetup {
+  options: AnalyzerOptions;
+  /** P1: Pagefind's hidden block. */
+  pagefind?: { terms?: "all" | "new" | "prefix"; weight?: number; title?: "keep" | "fold" | "terms"; surface?: boolean };
+  /** P3: Orama's sentinel (default on). */
+  exactTerms?: boolean;
+  /** P2: FlexSearch through the drop-in `faEncode` instead of `faDocument`. */
+  flexDropIn?: boolean;
+  /** P4: MiniSearch's combineWith. */
+  combineWith?: "AND";
+}
+
 export interface Config {
   name: string;
-  /** When set, the engine indexes and searches pre-analyzed terms with its own processing turned off. */
+  /** When set, the engine is set up through fa-search-kit's adapter (takes precedence over `analyzer`). */
+  fa?: FaSetup;
+  /**
+   * When set (and `fa` is not), the engine indexes and searches pre-analyzed terms with its own
+   * processing turned off. With `fa`, only compare.ts's engine-free coverage metric uses it.
+   */
   analyzer?: Analyzer;
   /** For engines that match any query word (MiniSearch, Orama, Lunr), when it differs from `analyzer`. */
   anyWordAnalyzer?: Analyzer;
@@ -73,15 +96,44 @@ function fa(name: string, options: AnalyzerOptions, experiment = false): Config 
   return { name, experiment, analyzer: { name, analyze: (text, mode) => get().analyze(text, { mode }) } };
 }
 
+/** A config set up through the adapters. `analyzer` is only for compare.ts's coverage metric. */
+function adapter(name: string, options: AnalyzerOptions, setup: Omit<FaSetup, "options"> = {}, experiment = false): Config {
+  return { ...fa(name, options, experiment), fa: { options, ...setup } };
+}
+const STANDARD: AnalyzerOptions = { profile: "standard" };
+const FULL: AnalyzerOptions = { profile: "full", lexicon };
+
 export const CONFIGS: Config[] = [
   { name: "stock" },
   { name: "tuned", tuned: true },
   { name: "snowball", analyzer: snowballAnalyzer },
-  fa("fa-light", { profile: "light" }),
-  fa("fa-standard", { profile: "standard" }),
-  // fa-full: verb lemmas for engines that require every query word, tense-keeping
-  // stems for engines that match any word (H10, bench/results/experiments.md).
-  { ...fa("fa-full", { profile: "full", lexicon }), anyWordAnalyzer: fa("fa-full/any", { profile: "full", lexicon, verbs: "stem" }).analyzer },
+  // The adapters pick the verb setting per engine (H10): lemmas where every query
+  // word must match (Pagefind, FlexSearch), stems where any may (MiniSearch, Orama, Lunr).
+  adapter("fa-light", { profile: "light" }),
+  adapter("fa-standard", STANDARD),
+  adapter("fa-full", FULL),
+  // Phase 1's wiring, the Phase 2 baseline.
+  fa("p1-light", { profile: "light" }),
+  fa("p1-standard", STANDARD),
+  { ...fa("p1-full", FULL), anyWordAnalyzer: fa("p1-full/any", { ...FULL, verbs: "stem" }).analyzer },
+  // Phase 2 experiment arms (bench/results/experiments.md, "Phase 2"); each on its own engine.
+  // P1 arms, with every layout option spelled out: the defaults moved to the winner (pf-surface).
+  adapter("pf-all", STANDARD, { pagefind: { terms: "all", title: "keep", surface: false } }, true),
+  adapter("pf-new", STANDARD, { pagefind: { terms: "new", title: "keep", surface: false } }, true),
+  adapter("pf-weight2", STANDARD, { pagefind: { terms: "all", title: "keep", surface: false, weight: 2 } }, true),
+  adapter("pf-title-fold", STANDARD, { pagefind: { terms: "all", title: "fold", surface: false } }, true),
+  adapter("pf-title-terms", STANDARD, { pagefind: { terms: "all", title: "terms", surface: false } }, true),
+  adapter("pf-new-fold", STANDARD, { pagefind: { terms: "new", title: "fold", surface: false } }, true),
+  adapter("pf-surface", STANDARD, { pagefind: { terms: "new", title: "terms", surface: true } }, true),
+  adapter("pf-all-surface", STANDARD, { pagefind: { terms: "all", title: "terms", surface: true } }, true),
+  adapter("pf-prefix", STANDARD, { pagefind: { terms: "prefix", title: "terms", surface: true } }, true),
+  adapter("flex-dropin", STANDARD, { flexDropIn: true }, true),
+  adapter("flex-dropin-full", FULL, { flexDropIn: true }, true),
+  adapter("orama-nosentinel", STANDARD, { exactTerms: false }, true),
+  adapter("orama-nosentinel-full", FULL, { exactTerms: false }, true),
+  adapter("orama-nosentinel-light", { profile: "light" }, { exactTerms: false }, true),
+  adapter("ms-and-lemma", FULL, { combineWith: "AND" }, true),
+  adapter("ms-and-stem", { ...FULL, verbs: "stem" }, { combineWith: "AND" }, true),
   // Kept for reference and the held-out diagnostic. The Phase 1 experiment arms (H1–H10)
   // are defined, with their exact options and bases, in bench/results/experiments.md;
   // they were removed from here when their options were decided (several options no

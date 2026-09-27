@@ -1,8 +1,8 @@
 /**
- * fa-search/lexicon: the word lists Snowball's rules cannot do without.
+ * fa-search-kit/lexicon: the word lists Snowball's rules cannot do without.
  *
- *     import { createAnalyzer } from "fa-search";
- *     import { lexicon } from "fa-search/lexicon";
+ *     import { createAnalyzer } from "fa-search-kit";
+ *     import { lexicon } from "fa-search-kit/lexicon";
  *     const { analyze } = createAnalyzer({ profile: "full", lexicon });
  *
  * - verbs: present → past stems from Hazm's verb list (MIT), so «می‌روم»,

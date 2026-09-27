@@ -1,7 +1,7 @@
 /**
- * fa-search: Persian text analysis for search in JS, the browser and static sites.
+ * fa-search-kit: Persian text analysis for search in JS, the browser and static sites.
  *
- *     import { createAnalyzer } from "fa-search";
+ *     import { createAnalyzer } from "fa-search-kit";
  *     const { analyze } = createAnalyzer();           // profile "standard"
  *     analyze("می روم به كتابخانه")                    // same terms at index and query time
  */

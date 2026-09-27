@@ -151,6 +151,26 @@ negation precision (needs graded judgments), package name.
 - **Size budgets:** core (normalize + tokenize + stem) ≤ 5 KB gzipped; lexicon ≤ 15 KB.
 
 ### Phase 2: Adapters and demo
+
+**Status (2026-09-27): built and measured; the gate passes apart from two cells each
+explained by an experiment decision.** Package `fa-search-kit` (not published):
+adapters for Orama, MiniSearch, FlexSearch, Lunr and Pagefind (browser side
+`/pagefind`, build side `/pagefind/build` + CLI), each ≤ core + 0.6 KB gzipped; smoke
+test of the packed tarball (`scripts/smoke-pack.ts`). The benchmark now measures the
+shipped adapters: [bench/results/phase2.md](bench/results/phase2.md) (test split, once),
+decisions P1–P4 in [bench/results/experiments.md](bench/results/experiments.md). Against
+Phase 1's wiring 57–62 cells up; blocking only wiki Orama typo-delete (the sentinel,
+P3; typos are Phase 3) and products Pagefind std-typing (P1: the page's own text must
+stay, Pagefind's length and prefix scoring favour pages typed in standard Persian;
+−5.5 on test, 25 → 83 vs stock). Orama's Phase 1 blocker is fixed (products canonical
+86 → 97). Pagefind layout found by experiment: all index terms in a hidden block, the
+title's terms as Pagefind's title meta, normalized spellings of words Pagefind reads
+differently; `processResult` rebuilds excerpts and restores titles. Demo in `demo/`
+(600 real pages, two Pagefind indexes, replay: stock 60% → 98%), checked headless;
+the in-browser check is pending. Deviations from the plan: the Pagefind adapter is two
+entries (the HTML annotator is build-time only, 1.9 KB, over the browser budget); the
+vendored Snowball files are copied into `dist/`, not compiled with `allowJs` (their
+Closure-style JSDoc does not type-check).
 - **`/pagefind`:**
   - A build step that uses the Node API `addCustomRecord`, or injects a `hidden` span of stems with `data-pagefind-weight` (Pagefind indexes hidden elements; confirmed in `parser.rs`).
   - A `processTerm` hook for Pagefind UI.

@@ -13,7 +13,7 @@ import PersianStemmer from "../vendor/snowball/persian-stemmer.js";
 import { MI_EXCEPTIONS, PROTECTED } from "./words.ts";
 import { ZWNJ } from "./normalize.ts";
 
-/** The optional lexicon layer (`fa-search/lexicon`); kept out of the core bundle. */
+/** The optional lexicon layer (`fa-search-kit/lexicon`); kept out of the core bundle. */
 export interface Lexicon {
   /**
    * Word → its term, ahead of every rule: words that look like word + suffix

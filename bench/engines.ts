@@ -1,23 +1,28 @@
 /**
- * One adapter per engine: build an index over the corpus under a config, then
+ * One wrapper per engine: build an index over the corpus under a config, then
  * answer queries with the top-10 doc ids.
  *
- * With an analyzer, docs and queries are passed through it first and the engine
- * only splits on whitespace, so the engine's own (English-oriented) processing
- * cannot interfere. That is equivalent to a proper tokenizer/processTerm hook,
- * which the Phase 2 adapters will provide.
+ * - A config with `fa` sets the engine up through fa-search-kit's shipped adapter
+ *   (src/adapters/), exactly as a site would.
+ * - A config with only `analyzer` (snowball, Phase 1's p1-*) passes docs and
+ *   queries through it first and has the engine split on whitespace, with its own
+ *   (English-oriented) processing off.
+ * - Otherwise the engine's own defaults (stock, tuned).
  */
 import { create, insertMultiple, search as oramaSearch, type AnyOrama } from "@orama/orama";
 import FlexSearch from "flexsearch";
 import lunr from "lunr";
 import MiniSearch from "minisearch";
-import { mkdtempSync, rmSync } from "node:fs";
-import { readFile } from "node:fs/promises";
 import { createRequire } from "node:module";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { faDocument, faEncode } from "../src/adapters/flexsearch.ts";
+import { faLunr } from "../src/adapters/lunr.ts";
+import { faMiniSearch } from "../src/adapters/minisearch.ts";
+import { faTokenizer } from "../src/adapters/orama.ts";
+import { faPagefind } from "../src/adapters/pagefind.ts";
+import { faPagefindIndex } from "../src/adapters/pagefind-build.ts";
 import type { Config } from "./configs.ts";
 import type { Doc } from "./corpus.ts";
+import { buildPagefind } from "./lib/pagefind.ts";
 
 export const TOP_K = 10;
 
@@ -49,6 +54,13 @@ const whitespace = (text: string) => text.split(" ").filter(Boolean);
 const minisearch: Engine = {
   name: "minisearch",
   async build(docs, config) {
+    if (config.fa) {
+      const fa = faMiniSearch({ ...config.fa.options, combineWith: config.fa.combineWith });
+      const ms = new MiniSearch<Doc>({ fields: ["title", "body"], idField: "id", ...fa });
+      ms.addAll(docs);
+      const searchOptions = { ...fa.searchOptions, boost: { title: 2 } };
+      return { search: async (q) => ms.search(q, searchOptions).slice(0, TOP_K).map((r) => String(r.id)) };
+    }
     const options = config.analyzer
       ? { tokenize: whitespace, processTerm: (t: string) => t }
       : {};
@@ -66,44 +78,52 @@ const minisearch: Engine = {
 /**
  * Orama looks each query term up as a prefix in its radix tree and sums the scores
  * of every indexed word it prefixes (`exact: false`, the default; verified in
- * components/index.js and trees/radix.js of 3.1.18). `exact: true` cannot switch it off
- * for Persian: it post-filters with a JS `\b` regex, which never matches between
- * Persian letters. `orama-exact` ends every analyzed term with a sentinel, so a term
- * is only a prefix of itself: what a Phase 2 adapter could do. Analyzer configs only.
+ * components/index.js and trees/radix.js of 3.1.18). The adapter ends every term
+ * with a sentinel so a term is only a prefix of itself (`exactTerms`, P3). Phase 1's
+ * wiring (p1-*) has no sentinel; Phase 1 emulated it in an `orama-exact` engine,
+ * dropped now that the adapter does it (its runs stay in bench/data/runs).
  */
-const SENTINEL = "_";
-function oramaEngine(name: string, exactTerms: boolean): Engine {
-  return {
-    name,
-    async build(docs, config) {
-      const tokenizer = config.analyzer
-        ? { language: "english", normalizationCache: new Map(), tokenize: whitespace }
-        : config.tuned ? { language: "arabic" } : undefined;
-      const db: AnyOrama = create({
-        schema: { title: "string", body: "string" } as const,
-        ...(tokenizer ? { components: { tokenizer: tokenizer as never } } : {}),
-      });
-      const mark = (text: string) => (exactTerms && config.analyzer ? text.split(" ").filter(Boolean).map((t) => t + SENTINEL).join(" ") : text);
-      await insertMultiple(db, prepare(docs, config, true).map((d) => ({ ...d, title: mark(d.title), body: mark(d.body) })), 5000);
-      return {
-        async search(q) {
-          const res = await oramaSearch(db, {
-            term: mark(prepareQuery(q, config, true)), properties: ["title", "body"], boost: { title: 2 }, limit: TOP_K,
-            ...(config.tuned ? { tolerance: 1 } : {}),
-          });
-          return res.hits.map((h) => String(h.id));
-        },
-      };
-    },
-  };
-}
-const orama = oramaEngine("orama", false);
-const oramaExact = oramaEngine("orama-exact", true);
+const orama: Engine = {
+  name: "orama",
+  async build(docs, config) {
+    const tokenizer = config.fa ? faTokenizer({ ...config.fa.options, exactTerms: config.fa.exactTerms })
+      : config.analyzer ? { language: "english", normalizationCache: new Map(), tokenize: whitespace }
+      : config.tuned ? { language: "arabic" } : undefined;
+    const db: AnyOrama = create({
+      schema: { title: "string", body: "string" } as const,
+      ...(tokenizer ? { components: { tokenizer: tokenizer as never } } : {}),
+    });
+    const raw = !!config.fa;
+    await insertMultiple(db, raw ? docs : prepare(docs, config, true), 5000);
+    return {
+      async search(q) {
+        const res = await oramaSearch(db, {
+          term: raw ? q : prepareQuery(q, config, true), properties: ["title", "body"], boost: { title: 2 }, limit: TOP_K,
+          ...(config.tuned ? { tolerance: 1 } : {}),
+        });
+        return res.hits.map((h) => String(h.id));
+      },
+    };
+  },
+};
 
 const flexsearch: Engine = {
   name: "flexsearch",
   async build(docs, config) {
     const { Document, Encoder } = FlexSearch;
+    if (config.fa) {
+      const document = { document: { id: "id", index: ["title", "body"] } };
+      const index = config.fa.flexDropIn
+        ? new Document({ ...document, encode: faEncode(config.fa.options) } as never)
+        : faDocument(FlexSearch, document, config.fa.options);
+      for (const d of docs) index.add(d as never);
+      return {
+        async search(q) {
+          const res = index.search(q, { limit: TOP_K, merge: true } as never) as unknown as { id: string }[];
+          return res.slice(0, TOP_K).map((r) => String(r.id));
+        },
+      };
+    }
     const options: Record<string, unknown> = {};
     if (config.analyzer) options.encoder = new Encoder({ normalize: false, dedupe: false, split: /\s+/, numeric: false });
     if (config.tuned) options.tokenize = "forward";
@@ -128,6 +148,17 @@ const escapeLunr = (q: string) => q.replace(/[:~^+\-*\\]/g, "\\$&");
 const lunrEngine: Engine = {
   name: "lunr",
   async build(docs, config) {
+    if (config.fa) {
+      const fa = faLunr(lunr, config.fa.options);
+      const idx = lunr(function () {
+        this.use(fa);
+        this.ref("id");
+        this.field("title", { boost: 2 });
+        this.field("body");
+        for (const d of docs) this.add(d);
+      });
+      return { search: async (q) => fa.search(idx, q).slice(0, TOP_K).map((r) => r.ref) };
+    }
     if (config.tuned && !lunrArLoaded) {
       require("lunr-languages/lunr.stemmer.support")(lunr);
       require("lunr-languages/lunr.ar")(lunr);
@@ -160,55 +191,41 @@ const escapeHtml = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "
 
 /**
  * Pagefind: index with the Node API, then run the real pagefind.js + WASM search
- * in Node, serving the bundle from disk through a fetch shim.
+ * in Node (bench/lib/pagefind.ts). With `fa`: pages annotated by the adapter
+ * (original text + hidden terms), queries through `processQuery`.
  */
 const pagefindEngine: Engine = {
   name: "pagefind",
   async build(docs, config) {
-    const pagefind = await import("pagefind");
     const lang = config.tuned ? "ar" : "fa";
-    const { index } = await pagefind.createIndex({ forceLanguage: lang });
-    if (!index) throw new Error("pagefind: createIndex failed");
-    for (const d of prepare(docs, config)) {
-      const html = `<!doctype html><html lang="${lang}"><body><h1>${escapeHtml(d.title)}</h1><p>${escapeHtml(d.body)}</p></body></html>`;
-      const r = await index.addHTMLFile({ url: `/d/${d.id}/`, content: html });
-      if (r.errors.length) throw new Error(`pagefind: ${r.errors.join("; ")}`);
-    }
-    const dir = mkdtempSync(join(tmpdir(), "fa-search-pagefind-"));
-    await index.writeFiles({ outputPath: dir });
-    await pagefind.close();
-
-    const origin = `http://pagefind.bench/${encodeURIComponent(dir)}/`;
-    const realFetch = globalThis.fetch;
-    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
-      const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
-      if (!url.startsWith(origin)) return realFetch(input, init);
-      const path = url.slice(origin.length).split("?")[0]!;
-      return new Response(await readFile(join(dir, path)));
-    }) as typeof fetch;
-    (globalThis as { location?: unknown }).location ??= new URL("http://pagefind.bench/");
-
-    // A fresh module instance per index: the query string busts Node's import cache.
-    const pf = await import(`${join(dir, "pagefind.js")}?v=${Date.now()}`);
-    await pf.options({ basePath: origin, noWorker: true });
-    await pf.init();
+    const html = (d: Doc) => `<!doctype html><html lang="${lang}"><body><h1>${escapeHtml(d.title)}</h1><p>${escapeHtml(d.body)}</p></body></html>`;
+    const fa = config.fa;
+    const pf = await buildPagefind(async (index) => {
+      if (fa) {
+        const errors = await faPagefindIndex({ ...fa.options, ...fa.pagefind }).addPages(index, docs.map((d) => ({ url: `/d/${d.id}/`, content: html(d) })));
+        if (errors.length) throw new Error(`pagefind: ${errors.join("; ")}`);
+        return;
+      }
+      for (const d of prepare(docs, config)) {
+        const r = await index.addHTMLFile({ url: `/d/${d.id}/`, content: html(d) });
+        if (r.errors.length) throw new Error(`pagefind: ${r.errors.join("; ")}`);
+      }
+    }, lang);
+    const query = fa ? faPagefind(fa.options).processQuery : (q: string) => prepareQuery(q, config);
     const urls = new Map<string, string>();
     return {
       async search(q) {
-        const res = await pf.search(prepareQuery(q, config));
-        const top = res.results.slice(0, TOP_K) as { id: string; data(): Promise<{ url: string }> }[];
+        const res = await pf.search(query(q));
+        const top = res.results.slice(0, TOP_K);
         return Promise.all(top.map(async (r) => {
           let url = urls.get(r.id);
           if (!url) { url = (await r.data()).url; urls.set(r.id, url); }
           return url.split("/").at(-2)!;
         }));
       },
-      async close() {
-        globalThis.fetch = realFetch;
-        rmSync(dir, { recursive: true, force: true });
-      },
+      close: () => pf.close(),
     };
   },
 };
 
-export const ENGINES: Engine[] = [pagefindEngine, orama, minisearch, flexsearch, lunrEngine, oramaExact];
+export const ENGINES: Engine[] = [pagefindEngine, orama, minisearch, flexsearch, lunrEngine];

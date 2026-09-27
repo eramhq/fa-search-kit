@@ -19,6 +19,8 @@ node bench/compare.ts snowball fa-standard --split dev   # the gate, see below
 node bench/conflation.ts --configs snowball,fa-standard  # UD gold lemmas: under/over-stemming
 node bench/collisions.ts               # what each fold rule merges (vocabulary pairs)
 node bench/rejoin.ts                   # the tokenizer's rejoin rules on UD sentences
+node bench/excerpts.ts                 # Pagefind excerpts under the adapter (P1)
+node demo/build.ts && node demo/check.ts   # the demo site and its replay, headless
 ```
 
 The Phase 0 baseline (`results/baseline.md`) was run on the first query set
@@ -106,11 +108,10 @@ Rules that keep the variants honest:
 
 Engines: Pagefind 1.5.2 (real WASM search, run in Node through a fetch shim),
 Orama 3.1.18, MiniSearch 7.2.0, FlexSearch 0.8.212, Lunr 2.3.9 (+ lunr-languages 1.22.0).
-Since Phase 1 also `orama-exact`: Orama with every analyzed term ended by a sentinel,
-so a query term matches only itself. Orama's default looks every query term up as a
-prefix and sums the scores of all words it prefixes (verified in its code, RESEARCH.md
-§4); `orama-exact` shows what an adapter that switches that off would get. Same as
-`orama` for configs without an analyzer.
+Phase 1 also ran `orama-exact` (every analyzed term ended by a sentinel, so a query
+term matches only itself; Orama's default looks every query term up as a prefix and
+sums the scores of all words it prefixes, RESEARCH.md §4). Since Phase 2 the Orama
+adapter does this itself, so the engine was dropped; its runs stay in `data/runs/`.
 Each indexes `title` and `body`, with a title boost of 2 where the engine has one
 (Pagefind weights `<h1>` itself).
 
@@ -119,9 +120,19 @@ Each indexes `title` and `body`, with a title boost of 2 where the engine has on
 | stock | engine defaults, as the README shows them |
 | tuned | the best the engine offers without extra code: its closest language option and typo tolerance. Orama `language: "arabic"` + `tolerance: 1`; MiniSearch `fuzzy: 0.2, prefix: true`; FlexSearch `tokenize: "forward"` + `suggest: true`; Lunr `lunr.ar`; Pagefind `forceLanguage: "ar"` |
 | snowball | the naive fix: split on non-letters, Snowball 3.1.1 Persian stemmer, same at index and query time; the engine only splits on whitespace |
-| fa-light | fa-search `profile: "light"`: normalize + tokenize (rejoin spaced affixes); madda-less spelling indexed too |
-| fa-standard | `profile: "standard"`: + Snowball with fa-search's fixes (closed-suffix split, joined «می» rule, derivational suffixes kept, compounds' parts and the other half-space spelling indexed) |
-| fa-full | `profile: "full"` + `fa-search/lexicon`: + verbs, keep list, clitics, broken plurals; verb lemmas for Pagefind and FlexSearch, tense-keeping stems for MiniSearch, Orama and Lunr (bench/results/experiments.md, H10) |
+| fa-light | fa-search-kit `profile: "light"`: normalize + tokenize (rejoin spaced affixes); madda-less spelling indexed too |
+| fa-standard | `profile: "standard"`: + Snowball with fa-search-kit's fixes (closed-suffix split, joined «می» rule, derivational suffixes kept, compounds' parts and the other half-space spelling indexed) |
+| fa-full | `profile: "full"` + `fa-search-kit/lexicon`: + verbs, keep list, clitics, broken plurals; verb lemmas for Pagefind and FlexSearch, tense-keeping stems for MiniSearch, Orama and Lunr (bench/results/experiments.md, H10) |
+| p1-light / p1-standard / p1-full | the same profiles through Phase 1's bench wiring (below); the Phase 2 gate's baseline |
+
+Since Phase 2 the fa-* configs run **through the shipped adapters** (`src/adapters/`),
+as a site would set them up: Orama gets `faTokenizer()`, MiniSearch `faMiniSearch()`,
+FlexSearch `faDocument()`, Lunr the `faLunr()` plugin and `fa.search()`, Pagefind pages
+annotated by `faPagefindIndex().addPages()` (the page's own text + hidden terms) and
+queries through `faPagefind().processQuery()`. Phase 1 fed each engine pre-analyzed
+text with its own processing off (the `p1-*` configs; their runs are Phase 1's fa-*
+runs, copied). Experiment arms vary one adapter option (bench/results/experiments.md,
+"Phase 2").
 
 The Phase 1 experiment arms (H1–H10) are recorded in `results/experiments.md` with
 their exact options; their configs were removed once decided.
@@ -154,6 +165,9 @@ from CC BY-SA titles); exit code 1 when a cell blocks.
   verb, which search wants merged). Raw Snowball is the baseline to improve on.
 - `collisions.ts`: vocabulary forms seen ≥ 50 times that a fold rule (or a config
   over another) makes identical, for review by hand.
+- `excerpts.ts`: Pagefind excerpts under the adapter: how often Pagefind's own
+  excerpt shows the hidden block of terms, and whether the one rebuilt by
+  `processResult` marks a page word (`results/excerpts.md`).
 - `rejoin.ts`: the rejoin rules on UD sentences, as written (every join is false)
   and with half-spaces typed as spaces (how many joins come back), per affix.
 

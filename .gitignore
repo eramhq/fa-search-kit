@@ -5,3 +5,5 @@ bench/.cache/
 *.log
 .DS_Store
 bench/results/compare/
+demo/dist/
+demo/data/

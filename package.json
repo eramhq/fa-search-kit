@@ -1,14 +1,68 @@
 {
-  "name": "fa-search",
-  "private": true,
+  "name": "fa-search-kit",
   "version": "0.0.0",
   "description": "Persian search that works in JS, the browser and static sites.",
   "license": "MIT",
   "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "default": "./dist/src/index.js"
+    },
+    "./lexicon": {
+      "types": "./dist/src/lexicon/index.d.ts",
+      "default": "./dist/src/lexicon/index.js"
+    },
+    "./pagefind": {
+      "types": "./dist/src/adapters/pagefind.d.ts",
+      "default": "./dist/src/adapters/pagefind.js"
+    },
+    "./pagefind/build": {
+      "types": "./dist/src/adapters/pagefind-build.d.ts",
+      "default": "./dist/src/adapters/pagefind-build.js"
+    },
+    "./orama": {
+      "types": "./dist/src/adapters/orama.d.ts",
+      "default": "./dist/src/adapters/orama.js"
+    },
+    "./minisearch": {
+      "types": "./dist/src/adapters/minisearch.d.ts",
+      "default": "./dist/src/adapters/minisearch.js"
+    },
+    "./flexsearch": {
+      "types": "./dist/src/adapters/flexsearch.d.ts",
+      "default": "./dist/src/adapters/flexsearch.js"
+    },
+    "./lunr": {
+      "types": "./dist/src/adapters/lunr.d.ts",
+      "default": "./dist/src/adapters/lunr.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "bin": {
+    "fa-search-kit-pagefind": "./dist/src/adapters/pagefind-cli.js"
+  },
+  "files": [
+    "dist",
+    "DATA-SOURCES.md"
+  ],
+  "keywords": [
+    "persian",
+    "farsi",
+    "search",
+    "stemmer",
+    "pagefind",
+    "orama",
+    "minisearch",
+    "flexsearch",
+    "lunr"
+  ],
   "engines": {
     "node": ">=22"
   },
   "scripts": {
+    "build": "rm -rf dist && tsc -p tsconfig.build.json && mkdir -p dist/vendor/snowball && cp vendor/snowball/base-stemmer.js vendor/snowball/persian-stemmer.js vendor/snowball/persian-stemmer.d.ts vendor/snowball/COPYING dist/vendor/snowball/",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "bench:fetch": "node bench/fetch.ts",
@@ -16,7 +70,35 @@
     "bench:corpus": "node --max-old-space-size=12000 bench/corpus.ts",
     "bench:queries": "node bench/queries.ts",
     "bench": "node bench/run.ts",
-    "bench:report": "node bench/report.ts --name baseline"
+    "bench:report": "node bench/report.ts --name baseline",
+    "size": "node scripts/size.ts",
+    "smoke:pack": "node scripts/smoke-pack.ts",
+    "demo": "node demo/build.ts",
+    "demo:check": "node demo/check.ts"
+  },
+  "peerDependencies": {
+    "@orama/orama": "^3.1.0",
+    "flexsearch": "^0.8.0",
+    "lunr": "^2.3.0",
+    "minisearch": "^7.0.0",
+    "pagefind": "^1.5.0"
+  },
+  "peerDependenciesMeta": {
+    "@orama/orama": {
+      "optional": true
+    },
+    "flexsearch": {
+      "optional": true
+    },
+    "lunr": {
+      "optional": true
+    },
+    "minisearch": {
+      "optional": true
+    },
+    "pagefind": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@orama/orama": "3.1.18",
