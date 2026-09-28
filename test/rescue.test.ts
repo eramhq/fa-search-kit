@@ -195,9 +195,19 @@ describe("createRescue", () => {
 
   it("rescueSearch keeps a fix only when it finds something", async () => {
     const r = await rescue.rescueSearch((q) => (q.includes("صابون") ? ["c"] : []), "سابون");
-    expect(r).toMatchObject({ results: ["c"], query: "صابون", fix: { from: "سابون", to: "صابون" } });
+    expect(r).toMatchObject({ results: ["c"], query: "صابون", fix: { from: "سابون", to: "صابون", auto: true } });
     const none = await rescue.rescueSearch(() => [], "سابون");
     expect(none).toEqual({ results: [], query: "سابون" });
+  });
+
+  it("a keyboard fix replaces the search; a misspelling is a suggestion unless nothing was found", async () => {
+    const search = (q: string) => (q.includes("کالا") ? ["k"] : q.includes("گیاهی") ? ["g"] : q.includes("دیجی") ? ["d"] : []);
+    // Keyboard: replaced, even though «کالا» alone would find something.
+    expect(await rescue.rescueSearch(search, "nd[d ;hgh")).toMatchObject({ results: ["k"], query: "دیجی کالا", fix: { auto: true } });
+    // Misspelling, something found as typed: results as typed, the fix offered.
+    expect(await rescue.rescueSearch(search, "سابون گیاهی")).toMatchObject({ results: ["g"], query: "سابون گیاهی", fix: { to: "صابون گیاهی", auto: false } });
+    // Misspelling, nothing found as typed: replaced.
+    expect((await rescue.check("سابون", 0))?.auto).toBe(true);
   });
 });
 
@@ -231,8 +241,9 @@ async function expectRescues(search: Search, verbs: "lemma" | "stem") {
   for (const [q, id] of CASES) {
     expect((await search(q))[0], `${q} as typed`).not.toBe(id);
     const r = await rescue.rescueSearch(search, q);
-    expect(r.results[0], q).toBe(id);
     expect(r.fix?.from).toBe(q);
+    // Replaced, or offered as a suggestion that finds the target.
+    expect(r.fix!.auto ? r.results[0] : (await search(r.fix!.to))[0], q).toBe(id);
   }
 }
 
@@ -290,7 +301,7 @@ describe("each engine rescues", () => {
       const rescue = createRescue({ analyzer: adapterAnalyzer({}, "lemma"), words: source, isKnown: pagefindKnows(pf, fa) });
       for (const [q, id] of CASES) {
         const r = await rescue.rescueSearch(search, q);
-        expect(r.results, q).toContain(id);
+        expect(r.fix!.auto ? r.results : await search(r.fix!.to), q).toContain(id);
       }
       // Pagefind finds an unknown word through a shorter prefix, so a result count cannot say "unknown".
       expect((await pf.search(fa.processQuery("اهوازی"))).results.length).toBeGreaterThan(0);

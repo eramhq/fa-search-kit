@@ -41,9 +41,14 @@ export interface Run {
   ranks: number[];
   buildMs: number;
   searchMs: number;
-  /** Configs with query rescue: per query, the query searched instead ("" = as typed) and the word bytes it needed. */
+  /**
+   * Configs with query rescue, per query: the query searched instead ("" = as typed), the word
+   * bytes it needed, the suggestion offered ("" = none) and the target's rank in its results.
+   */
   fixed?: string[];
   bytes?: number[];
+  suggested?: string[];
+  suggestedRanks?: number[];
 }
 
 /** Hash of a query set (ids and texts). */
@@ -66,18 +71,21 @@ async function runOne(corpus: CorpusName, engineName: string, configs: string[],
     const t0 = performance.now();
     const searcher = await engine.build(docs, config);
     const t1 = performance.now();
-    const ranks: number[] = [], fixed: string[] = [], bytes: number[] = [];
+    const ranks: number[] = [], fixed: string[] = [], bytes: number[] = [], suggested: string[] = [], suggestedRanks: number[] = [];
     for (const q of queries) {
       const top = await searcher.search(q.text);
       ranks.push(top.indexOf(q.target) + 1);
-      if (searcher.last) { fixed.push(searcher.last.fixed); bytes.push(searcher.last.bytes); }
+      if (searcher.last) {
+        fixed.push(searcher.last.fixed); bytes.push(searcher.last.bytes); suggested.push(searcher.last.suggested);
+        suggestedRanks.push((searcher.last.suggestedTop ?? []).indexOf(q.target) + 1);
+      }
     }
     const t2 = performance.now();
     await searcher.close?.();
     const run: Run = {
       corpus, engine: engine.name, config: config.name, ids: queries.map((q) => q.id), queryHash: queryHash(queries), ranks,
       buildMs: Math.round(t1 - t0), searchMs: Math.round(t2 - t1),
-      ...(searcher.last ? { fixed, bytes } : {}),
+      ...(searcher.last ? { fixed, bytes, suggested, suggestedRanks } : {}),
     };
     writeFileSync(file, JSON.stringify(run));
     const found = ranks.filter((r) => r > 0).length;

@@ -35,19 +35,27 @@ function onNotice(n: PagefindNotice | undefined) {
   noticeBox.textContent = "";
   // <bdi>: a query typed in Latin letters must not reorder the Persian sentence around it.
   const bdi = (text: string) => { const b = document.createElement("bdi"); b.textContent = text; return b; };
-  const shown = document.createElement("span");
-  shown.append("نتیجه‌ها برای «", bdi(n.fixedTo), "»");
-  const asTyped = document.createElement("button");
-  asTyped.type = "button";
-  asTyped.className = "as-typed";
-  asTyped.append("جست‌وجوی «", bdi(n.fixedFrom), "» به همان صورت");
-  asTyped.addEventListener("click", () => n.asTyped());
-  noticeBox.append(shown, " · ", asTyped);
+  const link = document.createElement("button");
+  link.type = "button";
+  link.className = "as-typed";
+  if (n.fixed) {
+    // Keyboard fixes, or nothing found as typed: these results are for the fix.
+    const shown = document.createElement("span");
+    shown.append("نتیجه‌ها برای «", bdi(n.to), "»");
+    link.append("جست‌وجوی «", bdi(n.from), "» به همان صورت");
+    link.addEventListener("click", () => n.other());
+    noticeBox.append(shown, " · ", link);
+  } else {
+    // A misspelling: the results stay as typed, the fix is offered.
+    link.append("«", bdi(n.to), "»");
+    link.addEventListener("click", () => show(n.to));
+    noticeBox.append("منظورتان ", link, " بود؟");
+  }
   // What the fix downloaded: word-list pieces, only for spelling fixes (none for keyboard fixes or when cached).
   const kb = rescue.words.bytes - bytesBefore;
   if (kb) {
     const cost = document.createElement("small");
-    cost.textContent = `برای این اصلاح ${fmtKB(kb)} کیلوبایت از فهرست واژه‌های سایت دریافت شد.`;
+    cost.textContent = `برای این پیشنهاد ${fmtKB(kb)} کیلوبایت از فهرست واژه‌های سایت دریافت شد.`;
     noticeBox.append(cost);
   }
 }
@@ -163,20 +171,24 @@ async function replay(status: Element) {
     const step = Math.max(1, Math.ceil(pool.length / PER_TYPE));
     const qs = pool.filter((_, i) => i % step === 0);
     if (!qs.length) continue;
-    let s = 0, f = 0;
+    let s = 0, f = 0, c = 0;
     let example = "";
     for (const [i, q] of qs.entries()) {
       status.textContent = `${label}: ${fmt(i + 1)} از ${fmt(qs.length)}`;
       const target = path(q.url);
       const inS = (await topUrls(stock, q.text, cacheS)).some((u) => path(u) === target);
-      const { results } = await replayRescue.rescueSearch((t) => topUrls(faIndex, fa.processQuery(t), cacheF), q.text);
+      const faTop = (t: string) => topUrls(faIndex, fa.processQuery(t), cacheF);
+      const { results, fix } = await replayRescue.rescueSearch(faTop, q.text);
       const inF = results.some((u) => path(u) === target);
+      // One click: found as shown, or in the results of the suggestion ("did you mean").
+      const inC = inF || (!!fix && !fix.auto && (await faTop(fix.to)).some((u) => path(u) === target));
       if (inS) s++;
       if (inF) f++;
+      if (inC) c++;
       if (inF && !inS && !example) example = q.text;
     }
     const tr = tbody.insertRow();
-    tr.innerHTML = `<th scope="row">${label}</th><td class="n">${fmt(qs.length)}</td><td class="stock">${bar(s / qs.length)}</td><td class="fa">${bar(f / qs.length)}</td><td></td>`;
+    tr.innerHTML = `<th scope="row">${label}</th><td class="n">${fmt(qs.length)}</td><td class="stock">${bar(s / qs.length)}</td><td class="fa">${bar(f / qs.length)}</td><td class="fa">${bar(c / qs.length)}</td><td></td>`;
     if (example) {
       const b = document.createElement("button");
       b.type = "button";

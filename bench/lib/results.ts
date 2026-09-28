@@ -20,6 +20,9 @@ export interface LoadedRun {
   /** Rescue configs: the query searched instead of each query ("" = as typed), and the word bytes it needed. */
   fixed?: Map<string, string>;
   bytes?: Map<string, number>;
+  /** The suggestion offered ("" = none) and the target's rank in its results. */
+  suggested?: Map<string, string>;
+  suggestedRank?: Map<string, number>;
 }
 
 const warned = new Set<string>();
@@ -45,6 +48,7 @@ export function loadRun(corpus: CorpusName, engine: string, config: string, spli
   return {
     run, rank: new Map(run.ids.map((id, i) => [id, run.ranks[i]!])),
     ...(run.fixed ? { fixed: new Map(run.ids.map((id, i) => [id, run.fixed![i]!])), bytes: new Map(run.ids.map((id, i) => [id, run.bytes![i]!])) } : {}),
+    ...(run.suggested ? { suggested: new Map(run.ids.map((id, i) => [id, run.suggested![i]!])), suggestedRank: new Map(run.ids.map((id, i) => [id, run.suggestedRanks![i]!])) } : {}),
   };
 }
 

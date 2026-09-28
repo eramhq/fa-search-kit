@@ -1,13 +1,16 @@
 /**
- * fa-search-kit/rescue: when the words as typed are a weak search, search fixed
- * words instead and say so ("showing results for «دیجی»; search «nd[d» as typed").
+ * fa-search-kit/rescue: when the words as typed are a weak search, find what they were
+ * meant to be. A keyboard left on English is fixed outright ("showing results for
+ * «دیجی»; search «nd[d» as typed"); a misspelling is offered as a suggestion ("did you
+ * mean «ساعت مچی»?"), and searched instead only when the words as typed find nothing.
  *
  *     import { createRescue } from "fa-search-kit/rescue";
- *     const rescue = createRescue({ analyzer });     // the adapter's analyzer (fa.analyzer)
+ *     const rescue = createRescue({ analyzer });     // the adapter's analyzer
  *     for (const doc of docs) { index.add(doc); rescue.addText(doc.title + " " + doc.body); }
  *
  *     const { results, fix } = await rescue.rescueSearch((q) => index.search(q), input);
- *     if (fix) showNotice(`showing results for «${fix.to}»`, () => search(fix.from));
+ *     if (fix?.auto) showNotice(`showing results for «${fix.to}»`, () => search(fix.from));
+ *     else if (fix) showSuggestion(`did you mean «${fix.to}»?`, () => search(fix.to));
  *
  * Two separate questions:
  * - **Is a word on the site?** The search index decides (`isKnown`): by default the
@@ -20,6 +23,8 @@
  *
  * A search is weak when a query word is unknown to the index or nothing is found. A fix is
  * kept only if the index knows the fixed word and the fixed search finds something.
+ * (Replacing every misspelled search also rewrote real words the site does not have,
+ * 24–59% of them: bench/results/phase3.md; suggestions leave the choice to the visitor.)
  */
 import type { Analyzer } from "../analyzer.ts";
 import { LAYOUTS, LETTERS, layoutCandidates } from "./keyboard.ts";
@@ -47,13 +52,18 @@ export interface Fix {
   to: string;
   /** Word pieces the speller used (see words.ts); empty when only keyboard fixes were made. */
   pieces: string[];
+  /**
+   * true: the results are for `to` (keyboard fixes only, or nothing found as typed);
+   * false: the results are as typed and `to` is a suggestion ("did you mean").
+   */
+  auto: boolean;
 }
 
 export interface RescueResult<R> {
   results: R[];
   /** The query the results are for. */
   query: string;
-  /** Set when the results are for a fixed query. */
+  /** A fix that finds something: searched instead (`fix.auto`) or a suggestion. */
   fix?: Fix;
 }
 
@@ -62,7 +72,10 @@ export interface Rescue {
   addText(text: string): void;
   /** A fix for `query`, given how many results it found as typed; undefined when it is not weak or nothing fits. */
   check(query: string, found: number): Promise<Fix | undefined>;
-  /** Search as typed; when that is weak and a fix finds something, the fixed search. */
+  /**
+   * Search as typed; when that is weak and a fix finds something, the fixed search
+   * (`fix.auto`) or the results as typed with the fix as a suggestion.
+   */
   rescueSearch<R>(search: (query: string) => R[] | Promise<R[]>, query: string): Promise<RescueResult<R>>;
 }
 
@@ -121,6 +134,8 @@ export function createRescue(options: RescueOptions): Rescue {
       }
       if (score >= 1 && score > best) { edits = e; best = score; }
     }
+    // Keyboard fixes are near certain; spelling fixes replace the search only when nothing was found.
+    const keyboard = edits.length;
 
     const pieces = new Set<string>();
     const near = async (key: string, rare = false) => {
@@ -151,7 +166,7 @@ export function createRescue(options: RescueOptions): Rescue {
     if (!edits.length) return undefined;
     let to = "", at = 0;
     for (const e of edits.sort((a, b) => a.start - b.start)) { to += query.slice(at, e.start) + e.text; at = e.end; }
-    return { from: query, to: to + query.slice(at), pieces: [...pieces] };
+    return { from: query, to: to + query.slice(at), pieces: [...pieces], auto: !found || edits.length === keyboard };
   }
 
   return {
@@ -165,7 +180,7 @@ export function createRescue(options: RescueOptions): Rescue {
       const fix = await check(query, results.length);
       if (fix) {
         const fixed = await search(fix.to);
-        if (fixed.length) return { results: fixed, query: fix.to, fix };
+        if (fixed.length) return fix.auto ? { results: fixed, query: fix.to, fix } : { results, query, fix };
       }
       return { results, query };
     },

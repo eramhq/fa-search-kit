@@ -39,8 +39,11 @@ export const TOP_K = 10;
 export interface Searcher {
   search(query: string): Promise<string[]>;
   close?(): Promise<void>;
-  /** With rescue: the last search's fixed query ("" when searched as typed) and the bytes of word pieces it needed. */
-  last?: { fixed: string; bytes: number };
+  /**
+   * With rescue, the last search: the query searched instead ("" when as typed), the
+   * suggestion offered ("" when none) and its top results, and the word bytes a fix needed.
+   */
+  last?: { fixed: string; bytes: number; suggested: string; suggestedTop?: string[] };
 }
 
 export interface Engine {
@@ -74,6 +77,8 @@ function sharedAnalyzer(config: Config, verbs: "lemma" | "stem"): FaAnalyzer | u
 }
 
 /** A rescue as a site sets one up for an in-browser engine: terms and words from each doc. */
+const replaces = (config: Config) => config.fa?.rescue === "replace";
+
 function browserRescue(config: Config, analyzer: FaAnalyzer | undefined, docs: Doc[]): Rescue | undefined {
   if (!config.fa?.rescue || !analyzer) return undefined;
   const rescue = createRescue({ analyzer });
@@ -81,17 +86,28 @@ function browserRescue(config: Config, analyzer: FaAnalyzer | undefined, docs: D
   return rescue;
 }
 
-/** `search` through the rescue when there is one; records the fix and the word bytes it needed. */
-function rescued(search: (q: string) => Promise<string[]>, rescue?: Rescue, sizes?: Map<string, number>): Searcher {
+/**
+ * `search` through the rescue when there is one; records what was searched instead, the
+ * suggestion offered (and its top results, for "one click away"), and the word bytes a fix
+ * needed. `replace` (arm R11): a suggestion replaces the search too, as rescue did before
+ * suggestions.
+ */
+function rescued(search: (q: string) => Promise<string[]>, rescue?: Rescue, sizes?: Map<string, number>, replace = false): Searcher {
   if (!rescue) return { search };
   const searcher: Searcher = {
-    last: { fixed: "", bytes: 0 },
+    last: { fixed: "", bytes: 0, suggested: "" },
     async search(q) {
       const r = await rescue.rescueSearch(search, q);
+      const fix = r.fix;
+      const suggestion = fix && !fix.auto ? await search(fix.to) : undefined;
+      const applied = fix && (fix.auto || replace) ? fix.to : "";
       // A cold visitor's weak search downloads the list's manifest and the pieces it needs.
-      const pieces = r.fix?.pieces ?? [];
-      searcher.last = { fixed: r.fix?.to ?? "", bytes: pieces.length ? pieces.reduce((n, k) => n + (sizes?.get(k) ?? 0), sizes?.get("index.json") ?? 0) : 0 };
-      return r.results;
+      const pieces = fix?.pieces ?? [];
+      searcher.last = {
+        fixed: applied, suggested: fix && !applied ? fix.to : "", suggestedTop: applied ? undefined : suggestion,
+        bytes: pieces.length ? pieces.reduce((n, k) => n + (sizes?.get(k) ?? 0), sizes?.get("index.json") ?? 0) : 0,
+      };
+      return replace && suggestion ? suggestion : r.results;
     },
   };
   return searcher;
@@ -106,7 +122,7 @@ const minisearch: Engine = {
       const ms = new MiniSearch<Doc>({ fields: ["title", "body"], idField: "id", ...fa });
       ms.addAll(docs);
       const searchOptions = { ...fa.searchOptions, boost: { title: 2 }, ...(config.fa.native ? { fuzzy: 0.2 } : {}) };
-      return rescued(async (q) => ms.search(q, searchOptions).slice(0, TOP_K).map((r) => String(r.id)), browserRescue(config, analyzer, docs));
+      return rescued(async (q) => ms.search(q, searchOptions).slice(0, TOP_K).map((r) => String(r.id)), browserRescue(config, analyzer, docs), undefined, replaces(config));
     }
     const options = config.analyzer
       ? { tokenize: whitespace, processTerm: (t: string) => t }
@@ -149,7 +165,7 @@ const orama: Engine = {
         ...(config.tuned || config.fa?.native ? { tolerance: 1 } : {}),
       });
       return res.hits.map((h) => String(h.id));
-    }, browserRescue(config, analyzer, docs));
+    }, browserRescue(config, analyzer, docs), undefined, replaces(config));
   },
 };
 
@@ -169,7 +185,7 @@ const flexsearch: Engine = {
       return rescued(async (q) => {
         const res = index.search(q, { limit: TOP_K, merge: true } as never) as unknown as { id: string }[];
         return res.slice(0, TOP_K).map((r) => String(r.id));
-      }, browserRescue(config, analyzer, docs));
+      }, browserRescue(config, analyzer, docs), undefined, replaces(config));
     }
     const options: Record<string, unknown> = {};
     if (config.analyzer) options.encoder = new Encoder({ normalize: false, dedupe: false, split: /\s+/, numeric: false });
@@ -210,7 +226,7 @@ const lunrEngine: Engine = {
         const terms = queryTerms(analyzer!, q);
         return terms.length ? idx.query((x) => { for (const t of terms) x.term(t, { usePipeline: false, editDistance: 1 }); }) : [];
       };
-      return rescued(async (q) => (config.fa!.native ? fuzzy(q) : fa.search(idx, q)).slice(0, TOP_K).map((r) => r.ref), browserRescue(config, analyzer, docs));
+      return rescued(async (q) => (config.fa!.native ? fuzzy(q) : fa.search(idx, q)).slice(0, TOP_K).map((r) => r.ref), browserRescue(config, analyzer, docs), undefined, replaces(config));
     }
     if (config.tuned && !lunrArLoaded) {
       require("lunr-languages/lunr.stemmer.support")(lunr);
@@ -285,7 +301,7 @@ const pagefindEngine: Engine = {
         if (!url) { url = (await r.data()).url; urls.set(r.id, url); }
         return url.split("/").at(-2)!;
       }));
-    }, rescue, sizes);
+    }, rescue, sizes, replaces(config));
     return { ...searcher, search: (q) => searcher.search(q), get last() { return searcher.last; }, close: () => pf.close() };
   },
 };

@@ -8,8 +8,9 @@
  *
  *     function onNotice(n) {   // draw it where you like; undefined clears it
  *       notice.hidden = !n;
- *       if (n) notice.innerHTML = `showing results for «${n.fixedTo}» · <a>search «${n.fixedFrom}» as typed</a>`;
- *       // and on the link's click: n.asTyped()
+ *       if (n?.fixed) notice.innerHTML = `showing results for «${n.to}» · <a>search «${n.from}» as typed</a>`;
+ *       else if (n) notice.innerHTML = `did you mean <a>«${n.to}»</a>?`;
+ *       // and on the link's click: n.other()
  *     }
  *
  * Build with the word list (`npx fa-search-kit-pagefind dist --words`, or `words` in
@@ -19,24 +20,27 @@
  * Meanwhile the rescue asks the UI's own pagefind.js (the same module, never
  * re-initialized) whether each word is on the site (`pagefindKnows`); Pagefind drops
  * unknown words silently, so "no results" alone misses most typos. On a weak search it tries the
- * keyboard layouts, then downloads the word pieces it needs and runs the speller. If
- * the fix finds something and the box still holds the same text, the UI is rerun
- * with a trailing space toggled (`triggerSearch` with the same text does nothing),
- * which finds the cached fix. Custom UIs on Pagefind's JS API can use `rescueSearch`
+ * keyboard layouts, then downloads the word pieces it needs and runs the speller. A
+ * misspelling becomes a suggestion (the results stay as typed); a keyboard fix, or any
+ * fix when nothing was found, replaces the search: if it finds something and the box
+ * still holds the same text, the UI is rerun with a trailing space toggled
+ * (`triggerSearch` with the same text does nothing), which finds the cached fix. Custom UIs on Pagefind's JS API can use `rescueSearch`
  * from fa-search-kit/rescue directly.
  */
-import { createRescue, fetchWords, type FetchedWords, type Rescue } from "../rescue/index.ts";
+import { createRescue, fetchWords, type FetchedWords, type Fix, type Rescue } from "../rescue/index.ts";
 import { folder } from "../rescue/words.ts";
 import type { PagefindAdapter } from "./pagefind.ts";
 import { adapterAnalyzer, type AdapterOptions } from "./shared.ts";
 
 export interface PagefindNotice {
   /** The text as typed. */
-  fixedFrom: string;
-  /** The text searched instead. */
-  fixedTo: string;
-  /** Search the text as typed (and remember that choice for this text). */
-  asTyped(): void;
+  from: string;
+  /** What it was meant to be. */
+  to: string;
+  /** true: the results are for `to`; false: `to` is a suggestion and the results are as typed. */
+  fixed: boolean;
+  /** Search the other one: the text as typed (and remember that for this text), or the suggestion. */
+  other(): void;
 }
 
 export interface PagefindRescueOptions extends AdapterOptions {
@@ -94,17 +98,19 @@ export function rescuePagefindUI(options: PagefindRescueOptions): PagefindRescue
   const words = fetchWords(options.wordsPath ?? new URL("../fa-words/", bundle));
   const known = pagefindKnows({ search: async (q) => (await module()).search(q) }, fa);
   const rescue = createRescue({ analyzer: adapterAnalyzer(options, "lemma"), words, isKnown: known });
-  const fixes = new Map<string, string>(), typed = new Set<string>();
+  const fixes = new Map<string, Fix>(), typed = new Set<string>();
   let ui: { triggerSearch(term: string): void } | undefined;
   let current = "";
   // Rerun the same text: the trailing space makes Pagefind UI search again.
   const rerun = () => ui?.triggerSearch(current.endsWith(" ") ? current.trimEnd() : current + " ");
+  const notice = (text: string, fix?: Fix) =>
+    onNotice?.(fix && { from: text, to: fix.to, fixed: fix.auto, other: fix.auto ? () => { typed.add(text); rerun(); } : () => ui?.triggerSearch(fix.to) });
 
   async function check(term: string, text: string) {
     const fix = await rescue.check(text, await count(text));
     if (!fix || !(await count(fix.to))) return;
-    fixes.set(text, fix.to);
-    if (current === term) rerun();
+    fixes.set(text, fix);
+    if (current === term) fix.auto ? rerun() : notice(text, fix);
   }
 
   return {
@@ -114,13 +120,10 @@ export function rescuePagefindUI(options: PagefindRescueOptions): PagefindRescue
     processTerm(term) {
       current = term;
       const text = term.trim();
-      const fix = fixes.get(text);
-      if (text && !typed.has(text) && fix) {
-        onNotice?.({ fixedFrom: text, fixedTo: fix, asTyped() { typed.add(text); rerun(); } });
-        return fa.processTerm(fix);
-      }
-      onNotice?.(undefined);
-      if (text && !typed.has(text)) check(term, text).catch((e) => console.warn("fa-search-kit rescue:", e));
+      const fix = typed.has(text) ? undefined : fixes.get(text);
+      notice(text, fix);
+      if (fix?.auto) return fa.processTerm(fix.to);
+      if (text && !fix && !typed.has(text)) check(term, text).catch((e) => console.warn("fa-search-kit rescue:", e));
       return fa.processTerm(term);
     },
   };

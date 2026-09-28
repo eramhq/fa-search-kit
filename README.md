@@ -11,7 +11,7 @@ index time and at query time, with drop-in adapters for **Pagefind**, **Orama**,
 benchmark of real Persian pages and the ways people actually type ([bench/](bench/README.md)).
 
 > Status: not published to npm yet. Build it from this repo (`npm run build`) or
-> `npm pack` it.
+> `npm pack` it. [Live demo](https://eramhq.github.io/fa-search-kit/).
 
 ## Install
 
@@ -147,12 +147,17 @@ input never throws.
 
 ## Query rescue: wrong keyboard, typos, sound-alike letters (optional)
 
-When the words as typed are a weak search, fa-search-kit can search fixed words instead
-and say so: *showing results for «دیجی کالا» · search «nd[d ;hgh» as typed*. It fixes a
-query typed with the keyboard on the wrong layout (`nd[d` → «دیجی», on the standard,
-legacy Windows and Mac layouts, and Persian letters that spell a Latin name back:
-«سشپسعدل» → samsung), and misspelled words: sound-alike letters (ت/ط, س/ص/ث, ز/ذ/ض/ظ,
-ه/ح, ق/غ), a neighbouring key, a missing or doubled letter, two letters swapped.
+When the words as typed are a weak search, fa-search-kit works out what they were meant
+to be:
+- **Keyboard left on another layout**: fixed outright, with a notice: *showing results for
+  «دیجی کالا» · search «nd[d ;hgh» as typed*. Standard, legacy Windows and Mac layouts, and
+  Persian letters that spell a Latin name back («سشپسعدل» → samsung). Such a query is never
+  what anyone meant to search.
+- **Misspelled words** (sound-alike letters ت/ط, س/ص/ث, ز/ذ/ض/ظ, ه/ح, ق/غ, a neighbouring
+  key, a missing or doubled letter, two letters swapped): offered as a suggestion, *did you
+  mean «تارزان»?*, with the results as typed. Only when the words as typed find nothing are
+  the fixed words searched instead (with the notice). A real word that simply is not on the
+  site is never swapped for another while it finds something.
 
 Two separate questions decide it:
 - **Is a word on the site?** The search index answers, not a word list, so spellings the
@@ -161,7 +166,7 @@ Two separate questions decide it:
   becomes known words, else the closest word the site uses (costed for Persian: sound-alike
   letters and neighbouring keys are cheap), most common first.
 
-A fix is kept only if the fixed search finds something. Everything is a separate import;
+A fix or suggestion is kept only if it finds something. Everything is a separate import;
 a site that does not use it ships exactly what it did before.
 
 | entry | what | gzip |
@@ -188,7 +193,8 @@ const rescue = createRescue({ analyzer });
 for (const doc of docs) { ms.add(doc); rescue.addText(`${doc.title} ${doc.body}`); }
 
 const { results, fix } = await rescue.rescueSearch((q) => ms.search(q), input);
-if (fix) showNotice(`نتیجه برای «${fix.to}»`, () => ms.search(fix.from));   // offer the text as typed
+if (fix?.auto) showNotice(`نتیجه‌ها برای «${fix.to}»`, () => ms.search(fix.from));   // results are for the fix; offer the text as typed
+else if (fix) showSuggestion(`منظورتان «${fix.to}» بود؟`, () => ms.search(fix.to));  // results are as typed; offer the fix
 ```
 
 `addText` collects the index's terms (to tell known words) and the site's words (for the
@@ -212,17 +218,20 @@ const rescue = rescuePagefindUI({ fa, profile: "full", lexicon, bundlePath: "/pa
 const ui = new PagefindUI({ element: "#search", bundlePath: "/pagefind/", processTerm: rescue.processTerm, processResult: fa.processResult });
 rescue.attach(ui);
 
-function onNotice(n) {              // called on every search; undefined clears the notice
+function onNotice(n) {              // called on every search; undefined clears it
   box.hidden = !n;
-  if (n) { box.querySelector("b").textContent = n.fixedTo; link.onclick = () => n.asTyped(); }
+  if (!n) return;
+  // n.fixed: the results are for n.to (offer n.from as typed); otherwise n.to is a suggestion.
+  box.textContent = n.fixed ? `نتیجه‌ها برای «${n.to}» · جست‌وجوی «${n.from}» به همان صورت` : `منظورتان «${n.to}» بود؟`;
+  box.onclick = () => n.other();    // search the other one
 }
 ```
 
 Pagefind UI asks for the query synchronously, so the first search is as typed; meanwhile
 the rescue asks the UI's own `pagefind.js` whether each word is on the site (Pagefind
 silently drops words it does not know, so "no results" misses most typos), downloads only
-the word pieces the weak search needs (never on page load; a median of 3 KB on a 20,000-product shop, 18 KB on 20,000 long articles), and reruns
-the UI with the fix. Custom UIs on Pagefind's JS API use `createRescue` with
+the word pieces the weak search needs (never on page load; a median of 3 KB on a 20,000-product shop, 18 KB on 20,000 long articles), then
+shows the suggestion, or reruns the UI with the fix when nothing was found as typed. Custom UIs on Pagefind's JS API use `createRescue` with
 `fetchWords("/fa-words/")` and `pagefindKnows(pagefind, fa)` from the same entry.
 
 ### What it gets right, and what it gets wrong
@@ -288,13 +297,19 @@ Typos and wrong keyboard layouts: see query rescue above.
 
 ## Demo
 
+**Live: https://eramhq.github.io/fa-search-kit/**. Type the way people type (Arabic ي/ك, no
+half-space, a typo, the keyboard left on English) and compare stock Pagefind with Pagefind +
+fa-search-kit side by side.
+
 `node demo/build.ts` builds a static site of 300 Persian Wikipedia articles and 300
 Digikala products with two search boxes side by side (stock Pagefind and Pagefind
 with fa-search-kit and its query rescue) and a replay of the benchmark's queries; `node demo/check.ts`
 runs the replay headless, and `node demo/browser-check.ts` clicks through the page in
 headless Chrome. It needs the benchmark data (`bench/README.md`). Pages and queries about
 religion, politics, war and other sensitive topics are left out of the demo. The
-demo quotes CC BY-SA text, so it is CC BY-SA and never part of the package.
+demo quotes CC BY-SA text, so it is CC BY-SA and never part of the package; the built site
+lives on the `gh-pages` branch (`node demo/build.ts --base /fa-search-kit/`, then push `demo/dist`
+there without `screenshots/`).
 
 ## Data and licence
 

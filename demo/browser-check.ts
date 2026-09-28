@@ -10,6 +10,7 @@
  * Screenshots go to demo/dist/screenshots/.
  *
  *     node demo/build.ts && node demo/browser-check.ts
+ *     DEMO_URL=https://eramhq.github.io/fa-search-kit/ node demo/browser-check.ts   # a deployed site
  *
  * Chrome: $CHROME, else the default macOS install path.
  * (demo/check.ts replays the benchmark through pagefind.js directly and cannot see
@@ -31,7 +32,8 @@ const server = createServer((req, res) => {
   try { if (statSync(path).isDirectory()) path = join(path, "index.html"); res.writeHead(200, { "content-type": TYPES[extname(path)] ?? "application/octet-stream" }).end(readFileSync(path)); }
   catch { res.writeHead(404).end(); }
 }).listen(0);
-const origin = `http://127.0.0.1:${(server.address() as { port: number }).port}/`;
+// DEMO_URL checks a site that is already served (the GitHub Pages deploy, or a build with --base).
+const origin = process.env.DEMO_URL ?? `http://127.0.0.1:${(server.address() as { port: number }).port}/`;
 
 const port = 9400 + Math.floor(Math.random() * 500);
 const chrome = spawn(CHROME, ["--headless=new", `--remote-debugging-port=${port}`, `--user-data-dir=${mkdtempSync(join(tmpdir(), "fa-demo-"))}`, "--no-first-run", "about:blank"], { stdio: "ignore" });
@@ -63,12 +65,15 @@ await send("Page.navigate", { url: origin });
 await sleep(2500);
 const atLoad = requested.length;
 
+
 const examples = await evaluate<string[]>(`return [...document.querySelectorAll("button[data-q]")].map((b) => b.dataset.q);`);
 let failed = 0;
 for (const [i, q] of examples.entries()) {
   const r = await evaluate<{ fa: string; stock: string; results: number; tags: number }>(`
     document.querySelector('button[data-q="${q}"]').click();
-    for (let i = 0; i < 40 && !document.querySelector("#fa .pagefind-ui__message")?.textContent.includes(${JSON.stringify(q)}); i++) await new Promise((r) => setTimeout(r, 150));
+    // Up to 20 s: over the network a first search downloads index chunks, and a fix reruns the search.
+    const done = () => document.querySelector("#fa .pagefind-ui__message")?.textContent.includes(${JSON.stringify(q)}) && document.querySelectorAll("#fa .pagefind-ui__result").length > 0;
+    for (let i = 0; i < 100 && !done(); i++) await new Promise((r) => setTimeout(r, 200));
     await new Promise((r) => setTimeout(r, 400));
     return {
       fa: document.querySelector("#fa .pagefind-ui__message")?.textContent ?? "",
@@ -123,10 +128,22 @@ const filtered = await evaluate<{ checked: boolean; notice: string; urls: string
   const box = await waitFor(wiki);
   if (!box) return { checked: false, notice: "", urls: [] };
   box.click(); await sleep(1000);
-  type("هوای فشدره");
+  type("i,hd tavni");
   await waitFor(() => !notice().hidden && results().length);
   return { checked: box.checked, notice: notice().hidden ? "" : notice().textContent, urls: results() };`);
 check("the rerun keeps a selected filter", filtered.checked && filtered.urls.length > 0 && filtered.urls.every((u) => u.includes("/wiki/")) && filtered.notice.includes("فشرده"), `${filtered.notice} | ${filtered.urls.length} results`);
+
+// A misspelling, when the words as typed find something: a suggestion, results unchanged; clicking it searches it.
+const suggestion = await evaluate<{ notice: string; clicked: string }>(`${helpers}
+  const box = [...document.querySelectorAll("#fa .pagefind-ui__filter-checkbox")].find((c) => c.checked);
+  if (box) { box.click(); await sleep(800); }
+  type("طارزان");
+  await waitFor(() => !notice().hidden && notice().textContent.includes("منظورتان"));
+  const text = notice().hidden ? "" : notice().textContent;
+  notice().querySelector("button")?.click();
+  await waitFor(() => input.value === "تارزان");
+  return { notice: text, clicked: input.value };`);
+check("a misspelling gets a suggestion, and clicking it searches it", suggestion.notice.includes("منظورتان") && suggestion.clicked === "تارزان", `${suggestion.notice} | box: ${suggestion.clicked}`);
 
 // The replay panel: runs to the end, with a row per variant type and no error.
 const t0 = Date.now();
@@ -151,5 +168,5 @@ ws.close();
 chrome.kill();
 server.close();
 for (const p of problems) console.log(`FAIL ${p}`);
-console.log(`${examples.length} examples, 6 rescue checks and the replay, ${failed + problems.length} problem(s); screenshots in demo/dist/screenshots/`);
+console.log(`${examples.length} examples, 7 rescue checks and the replay, ${failed + problems.length} problem(s); screenshots in demo/dist/screenshots/`);
 process.exit(failed + problems.length ? 1 : 0);

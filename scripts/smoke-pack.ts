@@ -183,7 +183,7 @@ const rescue = createRescue({ analyzer: a, words: fetchWords("https://example.co
 const found: Promise<RescueResult<string>> = rescue.rescueSearch((q: string) => [q], "کتاب");
 const fix: Fix | undefined = undefined;
 const list = createWordList({ analyzer: a });
-const ui = rescuePagefindUI({ fa: faPagefind(), lexicon, bundlePath: "/pagefind/", onNotice: (n?: PagefindNotice) => n?.asTyped() });
+const ui = rescuePagefindUI({ fa: faPagefind(), lexicon, bundlePath: "/pagefind/", onNotice: (n?: PagefindNotice) => n?.other() });
 const k: string = canonicalKey("کتاب", { analyzer: a }) + keyboardCandidates("nd[d").join();
 export { doc, hits, r, html, found, fix, list, ui, k };
 `;

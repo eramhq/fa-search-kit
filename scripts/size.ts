@@ -9,13 +9,14 @@
  * vendored Snowball stemmer) ≤ 5 KB gzipped; lexicon ≤ 15 KB gzipped; each
  * browser adapter, which bundles the core, ≤ the core's measured size + 1 KB (the
  * build-time Pagefind annotator: + 3 KB). Query rescue (Phase 3), all opt-in:
- * keyboard ≤ 0.8 KB on its own (it needs no core); rescue ≤ core + 2.6 KB (keyboard
- * included); rescue with the Pagefind UI wiring ≤ /pagefind + 3.2 KB (in the built
+ * keyboard ≤ 0.8 KB on its own (it needs no core); rescue ≤ core + 2.65 KB (keyboard
+ * included); rescue with the Pagefind UI wiring ≤ /pagefind + 3.25 KB (in the built
  * package `tsc` wraps the wiring's one dynamic `import()` of pagefind.js in its
  * extension-rewriting helper, ~0.1 KB that does nothing for an absolute URL); analytics ≤ core +
  * 0.3 KB. The plan said 2.5 KB for rescue; the shipped features measure 2.57 KB and each
  * one earned its place on the benchmark (suspects 66 bytes, the Persian → Latin keyboard
- * direction 86: bench/results/experiments.md, Phase 3), so the budget moved by 0.1 KB.
+ * direction 86: bench/results/experiments.md, Phase 3), so the budget moved by 0.1 KB,
+ * and by 0.05 KB more for suggestions instead of replacing (owner decision, Phase 3b).
  * Exits 1 when an entry is over.
  */
 import { build } from "esbuild";
@@ -39,8 +40,8 @@ const ENTRIES: { name: string; file: string; budget?: number; extra?: number; ov
   // Build time only (Node or a build script), never in a browser bundle.
   { name: "fa-search-kit/pagefind/build", file: "adapters/pagefind-build", extra: BUILD_EXTRA },
   { name: "fa-search-kit/keyboard", file: "rescue/keyboard", budget: 0.8 * KB },
-  { name: "fa-search-kit/rescue", file: "rescue/index", with: ["index"], extra: 2.6 * KB },
-  { name: "fa-search-kit/pagefind/rescue", file: "adapters/pagefind-rescue", with: ["adapters/pagefind"], extra: 3.2 * KB, over: "adapters/pagefind" },
+  { name: "fa-search-kit/rescue", file: "rescue/index", with: ["index"], extra: 2.65 * KB },
+  { name: "fa-search-kit/pagefind/rescue", file: "adapters/pagefind-rescue", with: ["adapters/pagefind"], extra: 3.25 * KB, over: "adapters/pagefind" },
   { name: "fa-search-kit/analytics", file: "analytics", extra: 0.3 * KB },
   // Build time only, Node: no budget.
   { name: "fa-search-kit/rescue/build", file: "rescue/build", node: true },

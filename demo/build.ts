@@ -4,6 +4,7 @@
  *
  *     node demo/build.ts            # writes demo/dist/ (gitignored)
  *     npx serve demo/dist           # or any static server
+ *     node demo/build.ts --base /fa-search-kit/   # for GitHub Pages (the site under a path)
  *
  * Needs the benchmark data (bench/data/, see bench/README.md). Picks ~300
  * Wikipedia articles and ~300 Digikala products from the benchmark corpora,
@@ -26,8 +27,10 @@ import { loadCorpus, type CorpusName, type Doc } from "../bench/corpus.ts";
 import { loadQueries, type Query } from "../bench/queries.ts";
 import { rng, seedOf } from "../bench/lib/rng.ts";
 
-const { values } = parseArgs({ options: { per: { type: "string", default: "300" } } });
+const { values } = parseArgs({ options: { per: { type: "string", default: "300" }, base: { type: "string", default: "/" } } });
 const PER = Number(values.per);
+/** Where the site is served: "/" locally, "/fa-search-kit/" on GitHub Pages. Result links in the indexes start with it. */
+const BASE = `/${values.base.replace(/^\/+|\/+$/g, "")}/`.replace(/^\/\/$/, "/");
 const DIST = new URL("dist/", import.meta.url);
 const SRC = new URL("src/", import.meta.url);
 /** Variant types the replay shows: what the analyzer fixes, then what query rescue fixes. */
@@ -105,7 +108,7 @@ for (const corpus of ["wiki", "products"] as const) {
   const src = SOURCES[corpus];
   const urls = new Map<string, string>();
   for (const d of chosen) {
-    const url = `/${corpus}/${d.id}/`;
+    const path = `${corpus}/${d.id}/`, url = BASE + path;
     urls.set(d.id, url);
     const body = `<header class="site"><a href="../../">بازگشت به جست‌وجو</a> · ${src.label}</header>
 <main>
@@ -116,8 +119,8 @@ for (const corpus of ["wiki", "products"] as const) {
 </main>
 <footer>${src.credit.replace("%LINK%", src.link(d))} <a href="../../licence/">دربارهٔ داده‌ها و مجوز</a></footer>`;
     const content = shell(d.title, body, 2);
-    mkdirSync(new URL(`.${url}`, DIST), { recursive: true });
-    writeFileSync(new URL(`.${url}index.html`, DIST), content);
+    mkdirSync(new URL(path, DIST), { recursive: true });
+    writeFileSync(new URL(`${path}index.html`, DIST), content);
     pages.push({ url, content });
   }
   for (const q of queries) {

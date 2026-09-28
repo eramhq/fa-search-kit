@@ -114,7 +114,7 @@ export function fetchWords(dir: string | URL, fetcher: typeof fetch = (...a) => 
   const get = async (file: string) => {
     // The manifest keeps its name across rebuilds: always revalidate it (pieces carry the hash).
     const res = await fetcher(base + file, file === "index.json" ? { cache: "no-cache" } : undefined);
-    if (!res.ok) throw new Error(`${res.status} ${base + file}`);
+    if (!res.ok) throw new Error(res.status + " " + file);
     const buf = new Uint8Array(await res.arrayBuffer());
     bytes += buf.length;
     // Gzipped unless a server already decoded it.

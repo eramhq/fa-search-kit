@@ -175,7 +175,7 @@ a { color: var(--firouzeh); text-underline-offset: 3px; }
 .replay thead th { font-weight: 500; color: var(--muted); font-size: 13px; }
 .replay tbody th { font-weight: 500; }
 .replay td.n, .replay .n { font-variant-numeric: tabular-nums; }
-.replay td.stock, .replay td.fa { inline-size: 22%; white-space: nowrap; }
+.replay td.stock, .replay td.fa { inline-size: 17%; white-space: nowrap; }
 .bar { display: inline-block; inline-size: 70px; block-size: 8px; margin-inline-end: 8px; border-radius: 4px; background: var(--line); overflow: hidden; vertical-align: middle; }
 .bar span { display: block; block-size: 100%; border-radius: 4px; background: var(--stock); }
 td.fa .bar span { background: var(--firouzeh); }

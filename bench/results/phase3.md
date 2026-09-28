@@ -1,5 +1,13 @@
 # Phase 3: query rescue — results
 
+> **Update (2026-09-28, Phase 3b, owner decision):** a misspelling is now offered as a
+> suggestion ("did you mean …?") and replaces the search only when the words as typed find
+> nothing; keyboard fixes still replace it. The numbers below are for the first behaviour
+> (every fix replaced the search), now arm R11. The new default's numbers are being measured
+> (bench/results/experiments.md, "Phase 3b"); first in-browser results: typo rows as shown are
+> back near fa-full on MiniSearch, Orama and Lunr where other words find something, "one click"
+> recall matches R11, rows spelled correctly are rewritten 0–0.2% (was up to 1.7%).
+
 **Test split, computed once** at the end of the phase (2026-09-27), after all tuning on
 dev. Tables: [phase3-test.md](phase3-test.md) (every cell, n and 95% intervals in
 [phase3-test.json](phase3-test.json)), [rescue-test.md](rescue-test.md) (rescue at a glance);

@@ -769,3 +769,25 @@ word the index knows but the word list lacks (an inflected form: «کتابخا�
 hypothesis states. (2) The keyboard pass dropped a few more non-words: a letter key that types
 no letter on a layout (Shift+S → «»», a Latin model code «S70» → «»70») and a run with digits
 and fewer than three letters. Both only remove rewrites.
+
+## Phase 3b: suggest, don't replace (owner decision, 2026-09-28)
+
+The owner found replacing a search with another word odd for a site search, and the
+false-fix rows agree (real words not on the site rewritten 24–59%). New default: a
+**keyboard** fix still replaces the search (near certain; Latin names and codes were
+rewritten 0–5%); a **spelling** fix is offered as a suggestion ("did you mean «…»?") with the
+results as typed, and replaces the search only when the words as typed find nothing.
+`fa-rescue` now measures that; the previous behaviour is arm **R11** (`r11-replace`, every
+fix replaces the search, emulated in the bench wrapper; its runs are the first `fa-rescue`
+runs, renamed). The bench records each suggestion and whether its results hold the target,
+so "one click" recall = found as shown or through the suggestion.
+
+**Expected (written before the run):** keyboard rows unchanged against R11. Typo rows, as
+shown: FlexSearch about unchanged (a typo there usually means nothing found, so the fix
+still applies); MiniSearch, Orama and Lunr back near fa-full on multi-word queries (the other
+words find something); Pagefind back near fa-full (it matches the typo by a shorter prefix,
+so something is found). "One click" recall ≈ R11 everywhere. False fixes: unchanged on the
+in-browser engines (a one-word guard query finds nothing, so its fix still applies), near 0
+on Pagefind; they become false suggestions instead. Notice rate on rows spelled correctly
+lower; canonical unchanged. Reported on dev and on test (the test split was read once for
+Phase 3; this is a product decision taken afterwards, not tuning, and both numbers are shown).

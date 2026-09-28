@@ -61,8 +61,8 @@ export interface FaSetup {
   flexDropIn?: boolean;
   /** P4: MiniSearch's combineWith. */
   combineWith?: "AND";
-  /** Phase 3: query rescue (fa-search-kit/rescue). */
-  rescue?: boolean;
+  /** Phase 3: query rescue (fa-search-kit/rescue); "replace": a suggestion replaces the search too (R11). */
+  rescue?: boolean | "replace";
   /** R4: the engine's own typo tolerance (MiniSearch `fuzzy: 0.2`, Orama `tolerance: 1`, Lunr edit distance 1). */
   native?: boolean;
 }
@@ -148,6 +148,8 @@ export const CONFIGS: Config[] = [
   // other arms (R1, R3, R5–R10) were removed with their options once decided
   // (bench/results/experiments.md, "Phase 3"); their runs stay in bench/data/runs.
   adapter("fa-rescue", FULL, { rescue: true }),
+  // R11: every fix replaces the search (rescue before suggestions; its runs are the first fa-rescue runs).
+  adapter("r11-replace", FULL, { rescue: "replace" }, true),
   { ...adapter("r4-native", FULL, { native: true }, true), engines: ["orama", "minisearch", "lunr"] },
   { ...adapter("r4-both", FULL, { rescue: true, native: true }, true), engines: ["orama", "minisearch", "lunr"] },
   // Kept for reference and the held-out diagnostic. The Phase 1 experiment arms (H1–H10)
