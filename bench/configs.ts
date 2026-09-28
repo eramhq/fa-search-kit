@@ -24,6 +24,8 @@
  *   and asks the index itself (a probe search) whether a word is known.
  * - fa-full-p3 / fa-rescue-p3: fa-full and fa-rescue before Phase 4b added the lemma list
  *   to the lexicon (bench/results/phase4b.md); the arms of Phases 1–3 run on that lexicon.
+ *   fa-full-4b / fa-rescue-4b: as Phase 4b shipped it, before its follow-up fixes. Both
+ *   lexicons are snapshots (bench/lib/lexicons/), so these configs stay reproducible.
  * - lm-*: Phase 4b's lemma arms over the lexicon without its list (bench/results/experiments.md).
  * - experiment arms (H1–H10, P1–P4, R1–R10, bench/results/experiments.md): one option
  *   changed; run only when named. Each arm was run against the profile defaults
@@ -37,6 +39,8 @@ import { createAnalyzer, type AnalyzerOptions } from "../src/index.ts";
 import { createLexicon, lexicon } from "../src/lexicon/index.ts";
 import { KEEP, PLURALS, VERBS } from "../src/lexicon/data.ts";
 import { LEMMAS } from "../src/lexicon/lemmas.ts";
+import * as P3 from "./lib/lexicons/p3.ts";
+import * as P4B from "./lib/lexicons/p4b.ts";
 import { CORPORA } from "./corpus.ts";
 import { loadQueries } from "./queries.ts";
 import { splitOf } from "./lib/split.ts";
@@ -121,8 +125,10 @@ function adapter(name: string, options: AnalyzerOptions, setup: Omit<FaSetup, "o
 const STANDARD: AnalyzerOptions = { profile: "standard" };
 const FULL: AnalyzerOptions = { profile: "full", lexicon };
 /** The lexicon before Phase 4b's lemma list (Phase 3's fa-full); the earlier arms ran on it. */
-const PLAIN = createLexicon(VERBS, KEEP, PLURALS);
+const PLAIN = createLexicon(P3.VERBS, P3.KEEP, P3.PLURALS);
 const FULL_P3: AnalyzerOptions = { profile: "full", lexicon: PLAIN };
+/** The lexicon as Phase 4b shipped it, before the follow-up fixes. */
+const FULL_4B: AnalyzerOptions = { profile: "full", lexicon: createLexicon(P4B.VERBS, P4B.KEEP, P4B.PLURALS, P4B.LEMMAS) };
 
 export const CONFIGS: Config[] = [
   { name: "stock" },
@@ -173,6 +179,8 @@ export const CONFIGS: Config[] = [
   { ...adapter("lm-list-rescue", { profile: "full", get lexicon() { const s = loadSaved("lm-list"); return (listRescue ??= createLemmaLexicon(PLAIN, predictorOf(s.model), s.tau)); } }, { rescue: true }, true) },
   // fa-full and fa-rescue as they were before Phase 4b (their runs: the old fa-full / fa-rescue runs).
   adapter("fa-full-p3", FULL_P3, {}, true),
+  adapter("fa-full-4b", FULL_4B, {}, true),
+  adapter("fa-rescue-4b", FULL_4B, { rescue: true }, true),
   adapter("fa-rescue-p3", FULL_P3, { rescue: true }, true),
   ...["lm-tree", "lm-linear", "lm-list", "lm-list-7", "lm-list-ez", "lm-list-ez-7", "lm-tree-mined", "lm-tree-ud", "lm-tree-hazm", "lm-tree-llm"].map((n) => lemmaArm(n)),
   // Kept for reference and the held-out diagnostic. The Phase 1 experiment arms (H1–H10)

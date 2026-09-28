@@ -59,8 +59,8 @@ nouns 257 / 8). After them, UD dev is 310 fixed and 47 broken; what is left is d
 - «حملات» → «حمله» (ات: dropped, since its misses are real words such as «معلومات», «انتظامات»).
 - Words outside the list: the list does not generalize, by design.
 - Broken plurals that replace the whole word («ابیات» → «بیت»): they were in the labels but
-  never fired in the tested arm, so they are left out of the shipped list; they are a
-  candidate for the hand-written broken-plural list, gated on its own.
+  never fired in the tested arm, so they are left out of the shipped list. Four of them
+  went into the hand-written broken-plural list instead (follow-ups, below).
 
 ## Benchmark bookkeeping
 
@@ -68,3 +68,23 @@ nouns 257 / 8). After them, UD dev is 310 fixed and 47 broken; what is left is d
   `fa-full-p3` and `fa-rescue-p3`, and the earlier experiment arms stay on that lexicon.
 - The new `fa-full` runs are the `lm-list` runs, copied.
 - `fa-rescue` on the main set is re-run.
+
+## Follow-ups (2026-09-28)
+
+Three small lexicon fixes, gated together against the lexicon as Phase 4b shipped it
+(`fa-full-4b`; both lexicon versions are snapshotted in bench/lib/lexicons/):
+
+1. The verb list drops «میزیدن» (میز) and «می‌راندن» (میران). Their stems start with «می», so
+   the everyday «می‌زد», «می‌زند», «می‌راند» read as their forms («می‌زید»). The rule, in
+   scripts/lib/mine.ts: drop a verb when most of its attested forms are «می» + another
+   listed verb's form. It drops exactly these two; «مردن» (میر) stays.
+2. Four broken plurals in `PLURALS`: «اجرام», «اذهان», «ابیات», «اوزان».
+3. The 7 keep-list words the builder had produced since commit 5e87260 («میزگرد», «میبدی»…).
+
+38 vocabulary words analyse differently. Benchmark, dev and test, main and lemma sets: 0
+cells up or down, **0 queries found → lost**. Conflation: UI down 0.1–0.2 points on both
+treebanks, OI unchanged. One wrong merge is added: «نمی‌زد» → «نزد», which is also «نزد»
+("near"). It is the existing kept-negation term (ن + past stem), which «نزدند» and «نمی‌زنم»
+already share. Query rescue with the shipped list against Phase 3 (test, `fa-rescue-p3 →
+fa-rescue-4b`): 335 cells, 0 up, 0 down; false fixes unchanged. `fa-rescue` is re-run with
+the fixes.

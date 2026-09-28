@@ -58,6 +58,26 @@ export const verbPairs = byPresentFreq.filter(([past, present]) => {
   }
   return true;
 });
+// A verb whose stem starts with «می» («میزیدن»: میز) reads the progressive of another verb
+// («میزد» = می + زد) as its own form, since the lexicon tries no prefix before «می». Drop it
+// when most of its attested affirmative forms are «می» + a form of another listed verb.
+const bareForm = (f: string) => normalizeText(f, { hamzaYeh: true }).text.replaceAll(ZWNJ, "");
+// Its forms include the bare 3rd-person present the lexicon also reads («میزد», «میزند»).
+const formsOf = new Map(verbPairs.map(([p, s]) => [p, new Set([...conjugate(p, s).filter((f) => !f.negative).map((f) => bareForm(f.form)), ...(s ? [s + "د", s + "ند"] : [])])] as const));
+const shadows = (past: string) => {
+  let own = 0, shared = 0;
+  for (const f of formsOf.get(past)!) {
+    const n = count(f);
+    own += n;
+    if (f.startsWith("می") && [...formsOf].some(([q, fs]) => q !== past && fs.has(f.slice(2)))) shared += n;
+  }
+  return own > 0 && shared > 0.5 * own;
+};
+for (let i = verbPairs.length - 1; i >= 0; i--) {
+  if (!/^می/.test(verbPairs[i]![1]) || !shadows(verbPairs[i]![0])) continue;
+  droppedPasts.push(`${verbPairs[i]![0]} (its forms are mostly «می» + another verb's)`);
+  verbPairs.splice(i, 1);
+}
 export const VERBS = verbPairs.map(([p, s]) => `${p}#${s}`).join(" ");
 
 /** Each bare word's (no ZWNJ) most frequent spelling, the canonical one: the term of a lemma is fa-full's term for it. */

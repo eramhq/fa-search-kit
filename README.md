@@ -28,7 +28,7 @@ adapters take the engine you already use and never import one themselves.
 |---|---|---:|
 | `light` | normalize (Arabic ي/ك/ة, hamza forms, digits, diacritics, stretched letters, ZWNJ cleanup) + tokenize (rejoin «می روم», «کتاب ها») | in the core |
 | `standard` (default) | + Snowball's Persian stemmer (3.1.1) with the fixes it needs: joined «میروم», closed suffixes after a half-space, compound parts, both half-space spellings, آ typed as ا | core: **4.95 KB** |
-| `full` | + `fa-search-kit/lexicon`: present → past verb stems («می‌روم», «رفتند» → «رفت»), possessive clitics, broken plurals (کتب → کتاب), a keep list against over-stemming, and a list of ~580 inflected forms the rules miss («نویسندگان» → «نویسنده», «بازیگران», «سخت‌تر») | + 10.83 KB |
+| `full` | + `fa-search-kit/lexicon`: present → past verb stems («می‌روم», «رفتند» → «رفت»), possessive clitics, broken plurals (کتب → کتاب), a keep list against over-stemming, and a list of ~580 inflected forms the rules miss («نویسندگان» → «نویسنده», «بازیگران», «سخت‌تر») | + 10.87 KB |
 
 Each adapter adds 0.1–0.5 KB to the core. `node scripts/size.ts` enforces the budgets.
 

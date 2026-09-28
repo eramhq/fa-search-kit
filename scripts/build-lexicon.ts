@@ -65,6 +65,8 @@ const BROKEN_PLURALS: [string, string][] = [
   ["طرق", "طریق"], ["حروف", "حرف"], ["دروس", "درس"], ["رسوم", "رسم"], ["صفوف", "صف"], ["فنون", "فن"],
   ["قرون", "قرن"], ["قلوب", "قلب"], ["نفوس", "نفس"], ["ملوک", "ملک"], ["عیون", "عین"], ["شئون", "شأن"],
   ["اساطیر", "اسطوره"], ["تصاویر", "تصویر"], ["مقادیر", "مقدار"], ["دفاتر", "دفتر"], ["مشاهیر", "مشهور"], ["قواعد", "قاعده"],
+  // Found by the Phase 4b labellers (whole-word replacements the lemma list cannot hold).
+  ["اجرام", "جرم"], ["اذهان", "ذهن"], ["ابیات", "بیت"], ["اوزان", "وزن"],
 ];
 const plurals = BROKEN_PLURALS.map(([p, s]) => [normalizeText(p).text, normalizeText(s).text] as const)
   .filter(([p]) => count(p) >= 20);

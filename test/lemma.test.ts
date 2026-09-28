@@ -144,3 +144,16 @@ describe("the shipped lexicon's lemma list (Phase 4b)", () => {
     }
   });
 });
+
+describe("lexicon follow-ups to Phase 4b", () => {
+  it("«می‌زد» is زد in any tense, not «میزیدن» (dropped: its forms are mostly «می» + another verb's)", () => {
+    for (const w of ["می‌زد", "میزد", "می‌زند", "زدند", "بزن"]) expect(q(full, w), w).toBe("زد");
+    expect(q(full, "می‌راند")).toBe(q(full, "راندند"));
+  });
+  it.each([["ابیات", "بیت"], ["اذهان", "ذهن"], ["اوزان", "وزن"], ["اجرام", "جرم"]])("broken plural %s → %s", (p, s) => {
+    expect(q(full, p)).toBe(q(full, s));
+  });
+  it("«میزگرد» is a word, not می + زگرد", () => {
+    expect(q(full, "میزگرد")).toBe("میزگرد");
+  });
+});

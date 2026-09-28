@@ -6,9 +6,9 @@ evaluation only. This file lists every piece of data that ends up in the bundles
 | data | file | source | licence |
 |---|---|---|---|
 | Snowball Persian stemmer (generated code) | `vendor/snowball/` | snowballstem/snowball v3.1.1 | BSD-3-Clause (`vendor/snowball/COPYING`) |
-| Present → past verb stems (356 pairs) | `src/lexicon/data.ts` `VERBS` | Hazm `verbs.dat`, rev `a399c829`; pairs with < 20 uses of all their forms dropped | MIT |
-| Broken plurals (103 pairs) | `src/lexicon/data.ts` `PLURALS` | written by hand for this project (`scripts/build-lexicon.ts`), kept when the plural is attested | project's own (MIT) |
-| Keep list (1,040 words) | `src/lexicon/data.ts` `KEEP` | **selected by rules from word counts** (see below) | see below |
+| Present → past verb stems (354 pairs) | `src/lexicon/data.ts` `VERBS` | Hazm `verbs.dat`, rev `a399c829`; pairs with < 20 uses of all their forms dropped, and verbs whose forms are mostly «می» + another verb (میزیدن, می‌راندن) | MIT |
+| Broken plurals (107 pairs) | `src/lexicon/data.ts` `PLURALS` | written by hand for this project (`scripts/build-lexicon.ts`), kept when the plural is attested | project's own (MIT) |
+| Keep list (1,047 words) | `src/lexicon/data.ts` `KEEP` | **selected by rules from word counts** (see below) | see below |
 | Lemma list (579 words, 30 edits) | `src/lexicon/lemmas.ts` `LEMMAS` | **labels of words from our own word list by two AI models** (gpt-6-luna, Claude), kept where both agree, plus rules over Hazm's verbs (see below) | see below |
 | Protected words (23) | `src/words.ts` `PROTECTED` | Snowball's own ان exceptions (folded) + words selected like the keep list, + 2 by hand | see below |
 | Joined-«می» exceptions (46 entries) | `src/words.ts` `MI_EXCEPTIONS` | selected by rules from word counts | see below |

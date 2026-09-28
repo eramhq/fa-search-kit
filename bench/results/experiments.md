@@ -1121,3 +1121,25 @@ Not done, recorded:
 - labels ات and ezafe ی (owner's choice);
 - the whole-word broken plurals («ابیات», «اجرام», «اذهان», «اوزان»…): a candidate for the
   hand-written `PLURALS` list, gated on its own.
+
+### Follow-ups after shipping (2026-09-28)
+
+Gated against `fa-full-4b` (the lexicon as shipped, snapshotted in bench/lib/lexicons/p4b.ts;
+Phase 3's in p3.ts, so `fa-full-p3` and the arms of Phases 1–3 stay reproducible):
+
+- **Two shadowing verbs dropped.** Hazm's «میزیدن» (present میز) and «می‌راندن» (میران) read
+  «میزد», «می‌زند», «می‌راند» as their own forms, because the lexicon tries no prefix before
+  «می» (the CP0 slip «می‌زد» → «می‌زید»). Rule in scripts/lib/mine.ts: drop a verb whose
+  present stem starts with «می» when more than half of its attested forms, including the
+  bare 3rd-person present the lexicon accepts, are «می» + another listed verb's form.
+  Dropped: those two; «مردن» (میر) stays.
+- **Four broken plurals** added to `PLURALS` («اجرام», «اذهان», «ابیات», «اوزان»), found by the
+  labellers as whole-word edits. «اشکالات» was already right; the labels' «شکل» was wrong.
+- **The 7 keep words** the builder had produced since 5e87260 are now shipped.
+
+Result: 38 vocabulary words analyse differently. `compare.ts fa-full-4b fa-full`, dev and
+test, main and lemma sets: 0 up, 0 down, **0 queries found → lost**. Conflation
+(bench/results/conflation-4b-fixes.md): UI −0.1 to −0.2 on both treebanks, OI equal, one
+added wrong merge («نمی‌زد» → «نزد», the kept-negation term that «نزدند» already shares with
+«نزد» "near"). Rescue: `fa-rescue-p3 → fa-rescue-4b` (test) 0 up, 0 down, false fixes
+unchanged; fa-rescue re-run with the fixes.
