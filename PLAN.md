@@ -217,6 +217,20 @@ words from typos without a big dictionary.
 - **Search-log grouping:** a `canonicalKey(query)` function so analytics can merge variants of the same query into one row.
 
 ### Phase 4: Upstream contributions (only with benchmark evidence attached)
+
+**Status (2026-09-28): started.** Pagefind: proposal for Persian support (Snowball stemmer,
+ZWNJ compound parts, ۀ fold) opened as https://github.com/Pagefind/pagefind/issues/1352,
+waiting for the maintainers' answer before the PR; a core bug found on the way (results for a
+query with an unknown word depend on earlier searches, reproduced on an English index) opened
+as https://github.com/Pagefind/pagefind/issues/1351. Orama: the Arabic splitter bug (also
+breaks Arabic آ/ء/vowelled text) with a tested one-line fix,
+https://github.com/oramasearch/orama/issues/1043. Snowball: derivational over-stemming with UD
+conflation numbers, plus the ـته/ـده, ۀ and joined-«می» questions,
+https://github.com/snowballstem/snowball/issues/304. lunr-languages: an open 2024 PR (#109)
+already adds `lunr.fa`; we benchmarked it (dev: behind Snowball on most rows, ahead on آ→ا)
+and commented with numbers and an offer to help rebase it on Snowball,
+https://github.com/MihaiValentin/lunr-languages/pull/109#issuecomment-5864755418. The repo is
+not public, so all of these carry their numbers inline.
 - **Pagefind:**
   - Add Persian to `pagefind_stem`, generated from Snowball 3.1.x, copying PR #1032.
   - Add ي/ك folding and ZWNJ handling in `fossick/splitting.rs`.

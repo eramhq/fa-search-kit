@@ -3,6 +3,14 @@
   "version": "0.0.0",
   "description": "Persian search that works in JS, the browser and static sites.",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/eramhq/fa-search-kit.git"
+  },
+  "homepage": "https://github.com/eramhq/fa-search-kit#readme",
+  "bugs": {
+    "url": "https://github.com/eramhq/fa-search-kit/issues"
+  },
   "type": "module",
   "sideEffects": false,
   "exports": {

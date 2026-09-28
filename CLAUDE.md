@@ -18,5 +18,5 @@ MiniSearch, FlexSearch and Lunr, upstream PRs, and a public benchmark.
 - **Don't break ZWNJ before the stemmer.** Snowball's Persian stemmer uses ZWNJ to find prefixes.
 - Stack: TypeScript, ESM, zero runtime deps, vitest, `tsc`, Node 22+. No Rust except in the upstream Pagefind PR.
 - Separate from tiny-finglish. Finglish is out of scope here.
-- The package is **`fa-search-kit`** (`fa-search` is taken on npm; the folder name stays). Not published yet: publishing and deploying the demo need the owner's go-ahead.
+- The package is **`fa-search-kit`** (`fa-search` is taken on npm; the folder name stays). The code is public at https://github.com/eramhq/fa-search-kit (MIT); npm publishing and deploying the demo still need the owner's go-ahead. Never commit `bench/data/` or `demo/dist/` (CC BY-SA and other third-party text).
 - Adapters live in `src/adapters/` and never import an engine (engines are optional peer deps). The benchmark measures the shipped adapters (`fa-*` configs); `p1-*` is Phase 1's bench wiring.
