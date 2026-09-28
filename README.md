@@ -308,8 +308,8 @@ runs the replay headless, and `node demo/browser-check.ts` clicks through the pa
 headless Chrome. It needs the benchmark data (`bench/README.md`). Pages and queries about
 religion, politics, war and other sensitive topics are left out of the demo. The
 demo quotes CC BY-SA text, so it is CC BY-SA and never part of the package; the built site
-lives on the `gh-pages` branch (`node demo/build.ts --base /fa-search-kit/`, then push `demo/dist`
-there without `screenshots/`).
+lives on the `gh-pages` branch (`node demo/build.ts`, then push `demo/dist` there without
+`screenshots/`; the same build works at any path, since the page sets Pagefind's `baseUrl` from its own address).
 
 ## Data and licence
 

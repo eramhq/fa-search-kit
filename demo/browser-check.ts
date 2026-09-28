@@ -10,7 +10,7 @@
  * Screenshots go to demo/dist/screenshots/.
  *
  *     node demo/build.ts && node demo/browser-check.ts
- *     DEMO_URL=https://eramhq.github.io/fa-search-kit/ node demo/browser-check.ts   # a deployed site
+ *     DEMO_URL=https://eramhq.github.io/fa-search-kit/ node demo/browser-check.ts   # a deployed site (any path)
  *
  * Chrome: $CHROME, else the default macOS install path.
  * (demo/check.ts replays the benchmark through pagefind.js directly and cannot see
@@ -151,9 +151,17 @@ const replay = await evaluate<{ status: string; rows: number; seconds: number; p
   document.querySelector("#run-replay").click();
   const status = document.querySelector("#replay-status"), progress = [];
   for (let i = 0; i < 1200 && !status.textContent.includes("تمام"); i++) { await sleep(500); if (i % 20 === 0) progress.push(status.textContent); }
-  return { status: status.textContent, rows: document.querySelectorAll("#replay-table tbody tr").length, seconds: 0, progress };`);
-check("the replay runs to the end", replay.status.includes("تمام") && replay.rows >= 15, `${replay.rows} rows in ${Math.round((Date.now() - t0) / 1000)} s; ${replay.status}; progress: ${replay.progress.slice(0, 6).join(" | ")}`);
+  // fa-search-kit's column must find something (it is 0% everywhere when result links and targets disagree).
+  const faFound = [...document.querySelectorAll("#replay-table tbody tr")].filter((r) => !/^[۰0]٪$/.test(r.cells[3]?.querySelector(".n")?.textContent.trim() ?? "")).length;
+  return { status: status.textContent, rows: document.querySelectorAll("#replay-table tbody tr").length, seconds: faFound, progress };`);
+check("the replay runs to the end, and fa-search-kit finds pages in most rows", replay.status.includes("تمام") && replay.rows >= 15 && replay.seconds >= replay.rows - 2, `${replay.rows} rows (${replay.seconds} with pages found) in ${Math.round((Date.now() - t0) / 1000)} s; ${replay.status}; progress: ${replay.progress.slice(0, 6).join(" | ")}`);
 await shot("replay.png");
+
+const link = await evaluate<{ href: string; status: number }>(`
+  const a = document.querySelector("#fa .pagefind-ui__result-link");
+  if (!a) return { href: "", status: 0 };
+  return { href: a.href, status: (await fetch(a.href)).status };`);
+check("result links open the page", link.status === 200 && link.href.startsWith(origin), `${link.href} → ${link.status}`);
 
 const once = (path: string) => requested.filter((u) => u.includes(path)).length;
 // Each pagefind.js instance starts its own worker (whose own fetches this page-level log does not see).
@@ -168,5 +176,5 @@ ws.close();
 chrome.kill();
 server.close();
 for (const p of problems) console.log(`FAIL ${p}`);
-console.log(`${examples.length} examples, 7 rescue checks and the replay, ${failed + problems.length} problem(s); screenshots in demo/dist/screenshots/`);
+console.log(`${examples.length} examples, 8 checks and the replay, ${failed + problems.length} problem(s); screenshots in demo/dist/screenshots/`);
 process.exit(failed + problems.length ? 1 : 0);

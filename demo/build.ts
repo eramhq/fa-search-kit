@@ -4,7 +4,6 @@
  *
  *     node demo/build.ts            # writes demo/dist/ (gitignored)
  *     npx serve demo/dist           # or any static server
- *     node demo/build.ts --base /fa-search-kit/   # for GitHub Pages (the site under a path)
  *
  * Needs the benchmark data (bench/data/, see bench/README.md). Picks ~300
  * Wikipedia articles and ~300 Digikala products from the benchmark corpora,
@@ -27,10 +26,8 @@ import { loadCorpus, type CorpusName, type Doc } from "../bench/corpus.ts";
 import { loadQueries, type Query } from "../bench/queries.ts";
 import { rng, seedOf } from "../bench/lib/rng.ts";
 
-const { values } = parseArgs({ options: { per: { type: "string", default: "300" }, base: { type: "string", default: "/" } } });
+const { values } = parseArgs({ options: { per: { type: "string", default: "300" } } });
 const PER = Number(values.per);
-/** Where the site is served: "/" locally, "/fa-search-kit/" on GitHub Pages. Result links in the indexes start with it. */
-const BASE = `/${values.base.replace(/^\/+|\/+$/g, "")}/`.replace(/^\/\/$/, "/");
 const DIST = new URL("dist/", import.meta.url);
 const SRC = new URL("src/", import.meta.url);
 /** Variant types the replay shows: what the analyzer fixes, then what query rescue fixes. */
@@ -108,8 +105,11 @@ for (const corpus of ["wiki", "products"] as const) {
   const src = SOURCES[corpus];
   const urls = new Map<string, string>();
   for (const d of chosen) {
-    const path = `${corpus}/${d.id}/`, url = BASE + path;
-    urls.set(d.id, url);
+    // Indexed as "/wiki/…"; the page sets Pagefind's baseUrl to wherever the site is served
+    // (demo/src/app.ts), so one build works at the root and under /fa-search-kit/ on GitHub Pages.
+    // The replay keeps the relative form ("wiki/…/"), resolved against the page.
+    const path = `${corpus}/${d.id}/`, url = `/${path}`;
+    urls.set(d.id, path);
     const body = `<header class="site"><a href="../../">بازگشت به جست‌وجو</a> · ${src.label}</header>
 <main>
 <article data-pagefind-body data-pagefind-filter="منبع:${src.label}">

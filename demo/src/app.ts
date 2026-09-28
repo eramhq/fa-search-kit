@@ -12,6 +12,7 @@ import { createRescue, fetchWords } from "../../src/rescue/index.ts";
 interface PagefindUIInstance { triggerSearch(term: string): void }
 declare const PagefindUI: new (options: Record<string, unknown>) => PagefindUIInstance;
 interface PagefindModule {
+  options(o: object): Promise<void>;
   init(): Promise<void>;
   search(q: string): Promise<{ results: { id: string; data(): Promise<{ url: string }> }[] }>;
 }
@@ -22,7 +23,10 @@ const fa = faPagefind({ analyzer });
 
 // Absolute: Pagefind UI resolves a relative bundlePath against its own script's folder.
 const bundle = (dir: string) => new URL(`./${dir}/`, location.href).href;
-const common = { showImages: false, showSubResults: false, resetStyles: false, excerptLength: 26, pageSize: 5 };
+// Pages are indexed as "/wiki/…" (demo/build.ts); result links start from wherever the
+// site is served ("/" locally, "/fa-search-kit/" on GitHub Pages).
+const baseUrl = new URL("./", location.href).pathname;
+const common = { showImages: false, showSubResults: false, resetStyles: false, excerptLength: 26, pageSize: 5, baseUrl };
 const stockUI = new PagefindUI({ ...common, element: "#stock", bundlePath: bundle("pagefind-stock") });
 
 // Query rescue: the notice under the fa-search-kit box, with the word bytes the search downloaded.
@@ -121,6 +125,7 @@ const fmt = (n: number) => n.toLocaleString("fa-IR");
 
 async function load(path: string): Promise<PagefindModule> {
   const m = (await import(/* @vite-ignore */ new URL(path, location.href).href)) as PagefindModule;
+  await m.options({ baseUrl });
   await m.init();
   return m;
 }
