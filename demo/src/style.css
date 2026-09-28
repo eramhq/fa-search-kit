@@ -99,6 +99,17 @@ a { color: var(--firouzeh); text-underline-offset: 3px; }
 .column.stock h2 { color: var(--muted); }
 .column.fa h2 { color: var(--firouzeh); }
 .empty { margin: 16px 0; color: var(--muted); font-size: 15px; }
+/* Query rescue: "showing results for …", with a way back to the text as typed. */
+.notice {
+  margin: 6px 0 2px; padding: 8px 12px;
+  border-radius: 10px; background: var(--firouzeh-wash); color: var(--ink);
+  font-size: 15px; line-height: 1.8;
+}
+.notice .as-typed {
+  padding: 0; border: 0; background: none; color: var(--firouzeh);
+  font: inherit; text-decoration: underline; text-underline-offset: 3px; cursor: pointer;
+}
+.notice small { display: block; color: var(--muted); font-size: 12px; }
 .searching .empty { display: none; }
 @media (max-width: 760px) {
   .columns { grid-template-columns: 1fr; gap: 36px; }
@@ -133,6 +144,16 @@ a { color: var(--firouzeh); text-underline-offset: 3px; }
 .pagefind-ui .pagefind-ui__result-link:hover { color: var(--firouzeh); text-decoration: underline; }
 .pagefind-ui .pagefind-ui__result-excerpt { margin-top: 4px; font: 400 15px/1.9 var(--sans); color: var(--muted); }
 .pagefind-ui mark { background: var(--mark); color: var(--mark-ink); border-radius: 3px; padding: 0 2px; }
+/* The source filter: one quiet row above the results (.columns: above Pagefind UI's injected styles). */
+.columns .pagefind-ui .pagefind-ui__filter-panel { margin: 4px 0 6px; padding: 0; border: 0; min-width: 0; flex: none; }
+.columns .pagefind-ui .pagefind-ui__filter-panel-label, .columns .pagefind-ui .pagefind-ui__filter-group-label { display: none; }
+.columns .pagefind-ui .pagefind-ui__filter-block { padding: 0; border: 0; }
+.columns .pagefind-ui .pagefind-ui__filter-name { display: none; }
+.columns .pagefind-ui .pagefind-ui__filter-group { flex-direction: row; flex-wrap: wrap; gap: 4px 20px; padding: 0; border: 0; margin: 0; }
+.columns .pagefind-ui .pagefind-ui__drawer { flex-direction: column; gap: 0; }
+.columns .pagefind-ui .pagefind-ui__results-area { margin-top: 0; }
+.columns .pagefind-ui .pagefind-ui__filter-value { padding: 0; }
+.columns .pagefind-ui .pagefind-ui__filter-label { font: 400 14px/1.8 var(--sans); color: var(--muted); }
 .pagefind-ui .pagefind-ui__button {
   block-size: auto; margin-top: 8px; padding: 10px; border-radius: 10px;
   font: 500 15px/1.5 var(--sans); color: var(--ink); background: var(--surface);

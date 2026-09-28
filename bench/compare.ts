@@ -11,6 +11,9 @@
  * if q < .05 and it drops by ≥ 2 points (recall or MRR). Also reports the
  * engine-free coverage metric (share of queries whose terms are all among the
  * target document's terms) and lists every query that went from found to lost.
+ * For query rescue configs also: the notice rate (share of queries searched as a fix)
+ * per type, the false-fix and typo-uniform rows of the extra set
+ * (bench/lib/rescue-sets.ts), and the word bytes per weak query.
  *
  * Writes bench/results/compare/<A>--<B>.<split>.md; exits 1 when something blocks.
  */
@@ -24,6 +27,8 @@ import { bh, mcnemar, wilcoxon } from "./lib/stats.ts";
 import { loadRun, macroByLemma, ORAMA_NOTE, splitQueries, VERB_TYPES } from "./lib/results.ts";
 import type { Split } from "./lib/split.ts";
 import { VARIANTS } from "./lib/variants.ts";
+import { loadSet, SET_TYPES } from "./lib/rescue-sets.ts";
+import { inSplit } from "./lib/split.ts";
 import type { Query } from "./queries.ts";
 
 const { values, positionals } = parseArgs({
@@ -193,6 +198,67 @@ for (const corpus of corpora) {
 }
 out(`Orama: ${ORAMA_NOTE}`);
 out();
+
+// --- query rescue ---------------------------------------------------------------------
+
+const rescueNames = [nameA, nameB].filter((n) => configByName(n).fa?.rescue);
+if (rescueNames.length) {
+  const pct1 = (x: number, n: number) => (n ? (100 * x / n).toFixed(1) : "–");
+  const median = (xs: number[], p: number) => xs.length ? xs.slice().sort((a, b) => a - b)[Math.min(xs.length - 1, Math.floor(p * xs.length))]! : 0;
+  out("## Query rescue");
+  out();
+  out(`Notice rate: share of queries searched as a fix instead of as typed (${rescueNames.join(", ")}). On rows spelled correctly it should be ≈ 0.`);
+  out();
+  for (const corpus of corpora) {
+    const queries = splitQueries(corpus, split);
+    const byType = new Map<string, Query[]>();
+    for (const q of queries) byType.set(q.type, [...(byType.get(q.type) ?? []), q]);
+    for (const name of rescueNames) {
+      const runs = new Map(engines.map((e) => [e, loadRun(corpus, e, name, split)] as const));
+      if (![...runs.values()].some((r) => r?.fixed)) continue;
+      out(`### ${corpus}: notice rate %, ${name}`);
+      out();
+      out(`| type | n | ${engines.join(" | ")} |`);
+      out(`|---|---:|${engines.map(() => "---:").join("|")}|`);
+      for (const type of types) {
+        const qs = byType.get(type) ?? [];
+        if (qs.length < MIN_N) continue;
+        out(`| ${type} | ${qs.length} | ${engines.map((e) => { const f = runs.get(e)?.fixed; return f ? pct1(qs.filter((q) => f.get(q.id)).length, qs.length) : "–"; }).join(" | ")} |`);
+      }
+      out();
+      const weak = engines.flatMap((e) => { const b = runs.get(e)?.bytes; return b ? [[e, [...b.values()].filter((x) => x > 0)] as const] : []; }).filter(([, xs]) => xs.length);
+      if (weak.length) {
+        out(`Word bytes per weak query that needed pieces (gzipped, a cold visitor: manifest + pieces): ${weak.map(([e, xs]) => `${e} median ${(median(xs, 0.5) / 1024).toFixed(1)} KB, p95 ${(median(xs, 0.95) / 1024).toFixed(1)} KB (${xs.length} queries)`).join("; ")}.`);
+        out();
+      }
+    }
+    // The extra set: false fixes (no target) and typo-uniform (recall, paired).
+    const setA = new Map(engines.map((e) => [e, loadRun(corpus, e, nameA, split, "rescue")] as const));
+    const setB = new Map(engines.map((e) => [e, loadRun(corpus, e, nameB, split, "rescue")] as const));
+    if (![...setB.values()].some(Boolean)) continue;
+    let set: Query[] = [];
+    try { set = loadSet(corpus, "rescue").filter((q) => inSplit(q.base, split)); } catch { continue; }
+    out(`### ${corpus}: extra set (bench/lib/rescue-sets.ts)`);
+    out();
+    out(`False-fix rows: % of queries rewritten, ${nameA} → ${nameB}. typo-uniform: recall@10, ${nameA} → ${nameB}.`);
+    out();
+    out(`| type | n | ${engines.join(" | ")} |`);
+    out(`|---|---:|${engines.map(() => "---:").join("|")}|`);
+    for (const type of SET_TYPES) {
+      const qs = set.filter((q) => q.type === type);
+      if (!qs.length) continue;
+      const cell = (e: string) => {
+        const a = setA.get(e), b = setB.get(e);
+        const v = (r: typeof a) => !r ? "–" : type === "typo-uniform"
+          ? pct1(qs.filter((q) => (r.rank.get(q.id) ?? 0) > 0).length, qs.length)
+          : r.fixed ? pct1(qs.filter((q) => r.fixed!.get(q.id)).length, qs.length) : "0";
+        return `${v(a)}→${v(b)}`;
+      };
+      out(`| ${type} | ${qs.length} | ${engines.map(cell).join(" | ")} |`);
+    }
+    out();
+  }
+}
 
 if (blocked.length) {
   out("## Blocking cells");

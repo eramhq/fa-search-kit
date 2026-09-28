@@ -5,6 +5,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { type CorpusName } from "../corpus.ts";
 import { loadQueries, type Query } from "../queries.ts";
+import { loadSet } from "./rescue-sets.ts";
 import { queryHash, runFile, type Run } from "../run.ts";
 import { inSplit, splitOf, type Split } from "./split.ts";
 
@@ -16,6 +17,9 @@ export function splitQueries(corpus: CorpusName, split: Split): Query[] {
 export interface LoadedRun {
   run: Run;
   rank: Map<string, number>;
+  /** Rescue configs: the query searched instead of each query ("" = as typed), and the word bytes it needed. */
+  fixed?: Map<string, string>;
+  bytes?: Map<string, number>;
 }
 
 const warned = new Set<string>();
@@ -25,20 +29,23 @@ const warned = new Set<string>();
  * regenerating queries). A full run serves every split; a dev-only run (experiment
  * arms) serves the dev split only.
  */
-export function loadRun(corpus: CorpusName, engine: string, config: string, split: Split = "all"): LoadedRun | null {
-  const all = loadQueries(corpus);
-  const full = runFile(corpus, engine, config);
-  const dev = runFile(corpus, engine, config, "dev");
+export function loadRun(corpus: CorpusName, engine: string, config: string, split: Split = "all", set = ""): LoadedRun | null {
+  const all = set ? loadSet(corpus, set) : loadQueries(corpus);
+  const full = runFile(corpus, engine, config, "all", set);
+  const dev = runFile(corpus, engine, config, "dev", set);
   const [file, expected] = existsSync(full) ? [full, all]
     : split === "dev" && existsSync(dev) ? [dev, all.filter((q) => splitOf(q.base) === "dev")] : [null, all];
   if (!file) return null;
   const run = JSON.parse(readFileSync(file, "utf8")) as Run;
   if (run.queryHash !== queryHash(expected)) {
-    const key = `${corpus}.${engine}.${config}`;
+    const key = `${corpus}.${engine}.${config}${set ? `.${set}` : ""}`;
     if (!warned.has(key)) { warned.add(key); console.warn(`skipping stale run ${key} (query set changed)`); }
     return null;
   }
-  return { run, rank: new Map(run.ids.map((id, i) => [id, run.ranks[i]!])) };
+  return {
+    run, rank: new Map(run.ids.map((id, i) => [id, run.ranks[i]!])),
+    ...(run.fixed ? { fixed: new Map(run.ids.map((id, i) => [id, run.fixed![i]!])), bytes: new Map(run.ids.map((id, i) => [id, run.bytes![i]!])) } : {}),
+  };
 }
 
 export const VERB_TYPES = new Set(["verb-tense", "verb-negation", "verb-tense-ud"]);

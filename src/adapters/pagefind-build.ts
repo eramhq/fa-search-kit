@@ -47,6 +47,12 @@ export interface PagefindIndexOptions extends AdapterOptions {
    * one typed in standard Persian. Default true.
    */
   surface?: boolean;
+  /**
+   * Receives the text of each page exactly as Pagefind indexes it (no nav, footer or
+   * `data-pagefind-ignore`), for the speller's word list: pass `createWordList()` from
+   * fa-search-kit/rescue/build and write it after the pages.
+   */
+  words?: { add(text: string): void };
 }
 
 /** What `addPages` needs from a Pagefind Node API index. */
@@ -55,9 +61,16 @@ export interface PagefindIndex {
 }
 
 export interface PagefindIndexAdapter {
-  /** The page with the analyzer's index terms added in hidden blocks. Idempotent. */
-  annotateHtml(html: string): string;
-  /** `index.addHTMLFile` for each page, annotated first. Returns Pagefind's errors. */
+  /**
+   * The page with the analyzer's index terms added in hidden blocks. Idempotent.
+   * `words: false` keeps this page's text out of the `words` list (a page Pagefind skips).
+   */
+  annotateHtml(html: string, options?: { words?: boolean }): string;
+  /**
+   * `index.addHTMLFile` for each page, annotated first. Returns Pagefind's errors. As in
+   * Pagefind, once one page has `data-pagefind-body`, pages without it are not indexed
+   * (and their words not listed).
+   */
   addPages(index: PagefindIndex, pages: Iterable<{ url?: string; sourcePath?: string; content: string }>): Promise<string[]>;
 }
 
@@ -71,6 +84,8 @@ const HEADING: Record<string, number> = { h1: 7, h2: 6, h3: 5, h4: 4, h5: 3, h6:
 const ENTITIES: Record<string, string> = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " ", zwnj: "‌", zwj: "‍", lrm: "", rlm: "", shy: "" };
 const TAG = /<!--[\s\S]*?-->|<(\/?)([a-zA-Z][\w:-]*)((?:[^>"']|"[^"]*"|'[^']*')*)>/g;
 const BLOCK = /<(div|span) hidden data-fa-search[^>]*>[^<]*<\/\1>/g;
+/** A page that marks its indexed part (then Pagefind skips every page that does not). */
+export const BODY = /\sdata-pagefind-body[\s=>]/i;
 const OWN_TITLE = /data-pagefind-meta\s*=\s*["'][^"']*\btitle\b/i;
 const escapeAttr = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
 
@@ -91,10 +106,11 @@ export function faPagefindIndex(options: PagefindIndexOptions = {}): PagefindInd
   const surface = options.surface ?? true;
 
   /** Hidden blocks for one region's text, by weight. */
-  function blocks(text: Map<number, string[]>): string {
+  function blocks(text: Map<number, string[]>, collect: boolean): string {
     let out = "";
     for (const [weight, chunks] of text) {
       const plain = chunks.join(" ");
+      if (collect) options.words?.add(plain);
       // Words as Pagefind indexes them. It indexes a half-space word joined
       // («تی‌شرت» → «تیشرت»), not its parts (probed on 1.5.2).
       const words = plain.split(/[^\p{L}\p{N}\p{M}\u200C]+/u).filter(Boolean);
@@ -125,9 +141,9 @@ export function faPagefindIndex(options: PagefindIndexOptions = {}): PagefindInd
     return out;
   }
 
-  function annotateHtml(input: string): string {
+  function annotateHtml(input: string, { words = true } = {}): string {
     const html = input.replace(BLOCK, "");
-    const explicitBody = /\sdata-pagefind-body[\s=>]/i.test(html);
+    const explicitBody = BODY.test(html);
     const regions: Region[] = [];
     // Open elements: tag name, whether its text is skipped, its weight, and its region.
     const stack: { tag: string; skip: boolean; weight: number; region?: Region }[] = [];
@@ -203,7 +219,7 @@ export function faPagefindIndex(options: PagefindIndexOptions = {}): PagefindInd
     const first = regions[0];
     let out = html;
     for (const r of [...regions].sort((a, b) => b.end - a.end)) {
-      out = out.slice(0, r.end) + blocks(r.text) + (r === first ? meta : "") + out.slice(r.end);
+      out = out.slice(0, r.end) + blocks(r.text, words) + (r === first ? meta : "") + out.slice(r.end);
     }
     return out;
   }
@@ -212,7 +228,12 @@ export function faPagefindIndex(options: PagefindIndexOptions = {}): PagefindInd
     annotateHtml,
     async addPages(index, pages) {
       const errors: string[] = [];
-      for (const page of pages) errors.push(...(await index.addHTMLFile({ ...page, content: annotateHtml(page.content) })).errors);
+      const all = [...pages];
+      const bodies = all.some((p) => BODY.test(p.content));
+      for (const page of all) {
+        const words = !bodies || BODY.test(page.content);
+        errors.push(...(await index.addHTMLFile({ ...page, content: annotateHtml(page.content, { words }) })).errors);
+      }
       return errors;
     },
   };

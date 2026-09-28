@@ -18,7 +18,11 @@
  * - p1-light / p1-standard / p1-full: the same profiles through Phase 1's bench
  *   wiring (pre-analyzed text, engine processing off); the Phase 2 gate's baseline.
  *   Their runs are Phase 1's fa-* runs, copied (bench/results/phase2.md).
- * - experiment arms (H1–H10, P1–P4, bench/results/experiments.md): one option
+ * - fa-rescue: fa-full through the adapters plus query rescue (fa-search-kit/rescue),
+ *   set up as a site would: in-browser engines collect terms and words with
+ *   `rescue.addText` next to indexing; Pagefind builds the word list while annotating
+ *   and asks the index itself (a probe search) whether a word is known.
+ * - experiment arms (H1–H10, P1–P4, R1–R10, bench/results/experiments.md): one option
  *   changed; run only when named. Each arm was run against the profile defaults
  *   of its time (the base named in experiments.md); the defaults have since moved
  *   to the winners, so re-running an arm now measures something slightly different.
@@ -57,6 +61,10 @@ export interface FaSetup {
   flexDropIn?: boolean;
   /** P4: MiniSearch's combineWith. */
   combineWith?: "AND";
+  /** Phase 3: query rescue (fa-search-kit/rescue). */
+  rescue?: boolean;
+  /** R4: the engine's own typo tolerance (MiniSearch `fuzzy: 0.2`, Orama `tolerance: 1`, Lunr edit distance 1). */
+  native?: boolean;
 }
 
 export interface Config {
@@ -73,6 +81,8 @@ export interface Config {
   tuned?: boolean;
   /** An experiment arm: run and reported only when named (`--config`). */
   experiment?: boolean;
+  /** Only these engines (an arm that means nothing on the others). */
+  engines?: string[];
 }
 
 const stemmer = new PersianStemmer();
@@ -134,6 +144,12 @@ export const CONFIGS: Config[] = [
   adapter("orama-nosentinel-light", { profile: "light" }, { exactTerms: false }, true),
   adapter("ms-and-lemma", FULL, { combineWith: "AND" }, true),
   adapter("ms-and-stem", { ...FULL, verbs: "stem" }, { combineWith: "AND" }, true),
+  // Phase 3: query rescue on fa-full, and the engine-native typo tolerance arms (R4). The
+  // other arms (R1, R3, R5–R10) were removed with their options once decided
+  // (bench/results/experiments.md, "Phase 3"); their runs stay in bench/data/runs.
+  adapter("fa-rescue", FULL, { rescue: true }),
+  { ...adapter("r4-native", FULL, { native: true }, true), engines: ["orama", "minisearch", "lunr"] },
+  { ...adapter("r4-both", FULL, { rescue: true, native: true }, true), engines: ["orama", "minisearch", "lunr"] },
   // Kept for reference and the held-out diagnostic. The Phase 1 experiment arms (H1–H10)
   // are defined, with their exact options and bases, in bench/results/experiments.md;
   // they were removed from here when their options were decided (several options no

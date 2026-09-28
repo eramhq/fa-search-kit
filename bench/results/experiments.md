@@ -534,3 +534,238 @@ rebuilt excerpts mark a word of the page. On typo and keyboard-layout rows the
 rebuilt excerpt marks a word less often than Pagefind's own (wiki 42% vs 64%), since
 Pagefind backs misspelled words off to shorter prefixes and the rebuild does not
 follow it: a Phase 3 item.
+
+---
+
+# Phase 3 experiments: query rescue
+
+Same protocol: expectations written before the arms run, dev split only, gate
+`bench/compare.ts`; test split read once at the end (`phase3.md`). The base is
+`fa-full` (Phase 2's shipped adapters); `fa-rescue` adds `fa-search-kit/rescue` as a
+site would set it up (in-browser engines: `rescue.addText` next to indexing, the term
+set decides "known"; Pagefind: word list built while annotating, a probe search
+decides "known"). New guards, in the extra query set `bench/data/queries/<corpus>.rescue.jsonl`
+(`bench/rescue-queries.ts`): **false fixes** (one-word queries that are fine as typed but
+not on the site: ff-real, ff-short, ff-latin, ff-digits, ff-name, ff-inflected; a rewrite
+is a false fix) and **typo-uniform** (dev only: one letter, the first included, replaced
+by a uniformly random letter, so the speller's own cost tables do not also write the
+test). Plus the **notice rate** on rows that are spelled correctly.
+
+## Expected trade-offs (written 2026-09-27, before any run)
+
+**fa-rescue vs fa-full.** Wrong-keyboard rows (layout-isiri9147, -win-legacy,
+-mac-legacy) rise from 0–13 to near each engine's canonical level (roughly 80–95), since
+each layout gives its own candidate and the index says which is a word; the rest are
+queries whose Latin/digit tokens or ZWNJ-as-space survive the round trip badly.
+layout-latin-on-fa (products) rises the same way. Typo rows: the big gains are on the
+engines that need every word, Pagefind and FlexSearch (wiki typo rows 1–30 → 50–80);
+OR engines already find most typo'd queries through the other words, so recall moves
+less there but MRR should rise. What the speller cannot fix: a typo-delete that leaves a
+3-letter word (only sound-alike swaps are allowed at 3 letters), a first letter changed
+across sound-alike classes, and a typo that lands on another site word (it is then
+"known"). The bigger the site, the more often distance 1 reaches a wrong but more common
+word: wiki (20k long articles) is the hard case. Correctly spelled rows: notice rate ≈ 0
+(every canonical word is on its target page, so known), recall unchanged. False fixes:
+**not ≈ 0 for real words that are absent from the site**: an unknown real word within
+distance 1 of a site word gets rewritten; ff-real and ff-name 20–50% on wiki and news,
+less on products; ff-short lower (3 letters: sound-alike only; 2 letters never); ff-latin
+low (a conversion must itself be known; 3–4-letter Latin strings are the risk); ff-digits
+≈ 0; ff-inflected mostly carried by the analyzer, the rest (10–30%) rewritten, usually to
+the base word. Bytes per weak Pagefind query: tens of KB on wiki (20k pages), a few KB on
+products.
+
+**R1: trigger.** `r1-empty` (fix only when nothing is found) vs `fa-rescue` (also when a
+query word is unknown to the index). Expected: identical on FlexSearch (a missing word
+means no results there); on Pagefind, which drops unknown words silently, `empty` loses
+most typo fixes of multi-word queries (typo rows 20–40 points lower); on OR engines it
+loses typo fixes whenever another word finds something, so typo recall and MRR lower. It
+should also have fewer false fixes only on multi-word queries (the guard set is one-word,
+so the same there).
+
+**R3: costs.** `r3-plain` (every edit costs 1, ties by count) vs Persian-aware costs.
+Expected: Persian-aware wins homophone (+5–15) and typo-adjacent (+3–8), about equal on
+typo-delete and typo-transpose; on typo-uniform the gap shrinks to ≈ 0 or reverses (the
+circularity the guard exists for). Plain also skips 3-letter words (it cannot tell a
+sound-alike swap), so a small loss there.
+
+**R4: engine-native typo tolerance** (MiniSearch `fuzzy: 0.2`, Orama `tolerance: 1`, Lunr
+edit distance 1; Pagefind and FlexSearch have none). `r4-native` (fa-full + native, no
+rescue) and `r4-both` (rescue + native) vs `fa-rescue`. Expected: native alone lifts typo
+rows on these OR engines (Phase 0 tuned MiniSearch reached 95–100 on wiki typo rows) but
+does nothing for wrong-keyboard rows, and costs canonical MRR (every term also matches
+its neighbours; Persian has many 3–4-letter words one edit apart). `both` has the best
+typo recall; whether its canonical/MRR cost blocks decides each adapter's recommendation.
+Orama with tolerance is slow (Phase 0 tuned Orama took 2.5 h), so its cells are dev only.
+
+**R5: sound-alike index key** (PLAN's "last-resort Soundex"). `r5-soundkey`: every index
+term also indexes its folded key; an unknown query term is replaced by its key when the
+index knows it (bench/lib/soundkey.ts), before the speller. Expected: homophone about as
+good as the speller's sound-alike costs, fewer bytes downloaded (homophone queries no
+longer need word pieces), other typo rows unchanged, canonical unchanged; costs index
+size, and folding merges distinct words (سد/صد, حال/هال) into one key, so homophone MRR a
+little lower than the speller's single best word.
+
+**R6: distance 2** for words of ≥ 6 letters (`r6-edits2`). Expected: little gain (every
+generator makes one edit; only typo-uniform on long words and some combined cases
+benefit), more false fixes (ff-real up) and more wrong fixes on wiki's large vocabulary:
+lose.
+
+**R7: word list** of words used ≥ 2 times (`r7-min2`) vs every word. Expected: about half
+the bytes (half of a site's words occur once), and a recall loss where the target's word
+is rare: product titles (unique brand and model words), and wiki/news titles' rarest
+words, which is what known-item queries are made of: lose on recall, win on bytes.
+
+### Added before the first arm runs (2026-09-27): two rules found in the first `fa-rescue` dev runs
+
+A first look at `fa-rescue`'s in-browser dev runs (before any arm) showed two failure
+patterns, each a hypothesis to test rather than a default:
+
+**R8: full edits at 3 letters.** The design rule "3-letter words: sound-alike swaps only"
+leaves every typo-delete that ends at 3 letters unfixed («بنج» for «برنج», «احر» for «احمر»,
+«بتر» for «بدتر»). Arm `r8-short`: 3-letter words get the full distance 1. Expected:
+typo-delete up (a few points on news and products, where titles are short words), small
+gains elsewhere; ff-short false fixes up sharply (most 3-letter strings are one edit from
+some site word), ff-real a little. Likely a loss on the guard.
+
+**R9: suspects.** On a large site a typo is often a word some page also has (the 20k news
+pages contain «فصله», «جامع», «اوکی‌ها»), so it is "known", nothing is unknown, and an engine
+that needs every word (FlexSearch, Pagefind) finds nothing with no word to fix. Arm
+`r9-suspects`: when nothing is found and every word is known, fix the one word whose
+closest word the site uses ≥ 10× as often. Expected: FlexSearch and Pagefind typo rows
+up (typo-delete and typo-transpose most, +5–15), OR engines unchanged (they rarely find
+nothing), false fixes unchanged (a one-word guard query that is known finds something);
+more bytes on Pagefind (every word of an empty query needs its pieces).
+
+Also changed before the arms (a bug, not a hypothesis): the keyboard pass took each run's
+first known candidate, so a query typed on mac legacy could mix layouts («av» → «شر»,
+standard, beside «تحویل», mac) and an engine needing every word found nothing
+(FlexSearch news layout-mac-legacy 50 vs layout-isiri9147 84). The rescue now takes the
+one layout under which the most runs become known words. The first runs were discarded.
+
+### Added after the guard set's first runs (2026-09-27, before the arms ran)
+
+The first `fa-rescue` runs on the extra set showed two keyboard bugs, now fixed (the
+runs were discarded): a key that types nothing on a layout (mac legacy Shift+F) turned
+Latin model codes into bare numbers («F41» → «41», a known word), and a key outside the
+table left a Latin letter in the "Persian" candidate («BRN» → «‌R»). A candidate must now
+keep one character per key and contain no Latin letter. On Pagefind, a Latin fragment
+counted as known when it began some Latin word on the site («jd», «vk»), which blocked
+the layout fix; a Latin or digit term now has to be a whole word (Persian terms keep
+Pagefind's prefix match: exact matching lost 2–7% of correctly spelled words, measured on
+the demo index).
+
+The same runs put false fixes of real words that are not on the site at 30–60% (wiki
+ff-real 42–59%, ff-name 35–47%), as expected: nothing tells an unknown real word from a
+typo except the site's own words. **R10: only cheap edits** (`r10-cheap`, `maxCost: 0.8`:
+sound-alike letters, neighbouring keys, doubled letters, a dropped or added long vowel, two
+letters swapped; no arbitrary substitution, insertion or deletion). Expected: false fixes
+down by a third to a half (many false fixes are an arbitrary one-letter change: کارتاژ →
+کارتان, پیکسار → پیکار), typo-delete down sharply (a deleted consonant costs 1), homophone,
+typo-adjacent and typo-transpose about the same, typo-uniform down (arbitrary substitutions).
+
+## Phase 3 results (dev split)
+
+Summary tables: `node bench/rescue-report.ts --split dev` → `bench/results/rescue-dev.md` (per
+config × engine: canonical, the four typo rows, the keyboard rows, notice rate on rows
+spelled correctly, false fixes pooled over the six ff-* types, typo-uniform, word bytes);
+per-cell gates: `node bench/compare.ts fa-rescue <arm> --split dev`. Coverage: every arm
+on the four in-browser engines × three corpora; on Pagefind every arm on products, and
+fa-rescue on all three (a Pagefind wiki or news run with rescue takes 40–90 minutes; R9 on
+Pagefind wiki and news is measured by the final run, gated against fa-full). R4 has no
+meaning for Pagefind and FlexSearch (no edit-distance tolerance) and ran on the other three.
+
+### fa-rescue vs fa-full (dev): 57+ cells up, none down, nothing blocks
+
+Typo rows (mean of homophone, typo-adjacent, typo-delete, typo-transpose), keyboard rows
+(mean of the layout rows), recall@10:
+
+| | wiki typo | wiki layout | news typo | news layout | products typo | products layout |
+|---|---|---|---|---|---|---|
+| Pagefind | 16 → 73 | 0 → 84 | 21 → 80 | 0 → 93 | 18 → 83 | 5 → 87 |
+| FlexSearch | 2 → 70 | 0 → 79 | 2 → 76 | 0 → 82 | 1 → 78 | 0 → 78 |
+| MiniSearch | 30 → 80 | 1 → 83 | 98 → 100 | 0 → 99 | 60 → 90 | 21 → 92 |
+
+Orama and Lunr move like MiniSearch. Notice rate on rows spelled correctly: 0.2–1.1%
+(clitic-add 2–8%, where recall held or rose; hamza, plural-add, combo ≤ 3%); canonical
+unchanged everywhere. Word bytes per weak Pagefind query (gzipped, a cold visitor):
+products median 3.3 KB / p95 6.2 KB, news 8.9 / 21.2 KB, wiki 17.0 / 58.3 KB (20,000 long
+articles each). False fixes (pooled ff-*): wiki 22.7% (Pagefind) – 31.3% (in-browser), news
+19.7–24.7%, products 15.3–19.8%; per type, real words not on the site are rewritten most
+(wiki ff-real 42–59% before the keyboard fixes, ff-name 35–47%), digits and Latin least.
+As expected, and the price of fixing automatically: nothing but the site's words tells an
+unknown real word from a typo. typo-uniform (the circularity guard) rises too, but less
+than the generator's typo rows: wiki 26 → 64 (MiniSearch), 0 → 52 (FlexSearch), 10 → 54
+(Pagefind).
+
+### R1: trigger "empty" only? **No: an unknown word also makes a search weak.**
+
+71 cells block. On OR engines "empty" throws away most keyboard fixes (news layout rows
+99 → 39, products 92 → 46), since another word of the query usually finds something; on
+FlexSearch it is identical, as expected. On Pagefind (products) typo rows fall 83 → 75: a
+typo'd word is matched through a shorter prefix, so the search is rarely empty. The same
+effect nearly removes Pagefind's false fixes (15.3% → 0.7%), because a one-word query of an
+unknown real word also finds something by prefix. That is a real alternative for a site
+that prefers never to rewrite a correct query; recall wins the default.
+
+### R3: plain edit distance? **No: Persian-aware costs** (but see typo-uniform)
+
+28 cells block (typo rows: wiki −8, products −6, Pagefind products −6). On typo-uniform,
+plain is **better** by 2–7 points (wiki FlexSearch 52 → 59, news FlexSearch 64 → 70,
+Pagefind products 66 → 69): the circularity the guard was built for. Persian-aware costs
+win on the typos the generators model (sound-alike letters, neighbouring keys), which are
+the ones people make most (FarsTypo patterns, RESEARCH.md); plain ranking by frequency does
+better on arbitrary substitutions. Kept Persian-aware; the gap is reported, not hidden.
+
+### R4: engine-native typo tolerance? **MiniSearch: yes, with or without rescue. Orama, Lunr: no.**
+
+MiniSearch `fuzzy: 0.2` passes the gate alone (vs fa-full, no MiniSearch cell blocks) and
+on top of rescue (vs fa-rescue: wiki typo-delete 54 → 75, products 73 → 88, clitic-add
+87 → 94; no cell down), and on typo-uniform it beats our speller outright (wiki 64 → 77 with
+both, 92 alone), since it keeps every close term instead of choosing one. It fixes no
+wrong-keyboard query. Orama `tolerance: 1` and Lunr's edit distance 1 wreck ranking (vs
+fa-rescue: 129 cells block, canonical wiki −8 to −10, products −14 to −21): every term also
+matches its neighbours and Persian has many short words one edit apart. So the README
+recommends `fuzzy: 0.2` for MiniSearch and neither option for Orama or Lunr; the adapters do
+not change (a site passes MiniSearch's own option).
+
+### R5: sound-alike index key? **No.** Nothing up, nothing down (0/291 cells), index larger
+(every term with a sound-alike letter indexed twice), bytes unchanged on Pagefind products:
+the speller's sound-alike costs already find those words, from the site's own list.
+
+### R6: distance 2 for words of 6+ letters? **No.** No cell moves; false fixes +7 to +9 points.
+
+### R7: only words used twice or more? **No.** 18 cells block, all products typo rows
+(−4 to −9): a product title's words are often used once on the whole site, and those are
+exactly what a known-item search types. Bytes: Pagefind products median 3.3 → 2.6 KB. False
+fixes fall 3–4 points. (On wiki and news recall rose by about half a point: rarer words are
+more often junk there.)
+
+### R8: full edits for 3-letter words? **No.** +0.1–0.9 on typo rows, false fixes +9 to +13
+points (news 24.7 → 33.3, products 19.8 → 33.1): most 3-letter strings are one edit from
+some site word.
+
+### R9: suspects when nothing is found? **Yes** (adopted, always on)
+
+vs fa-rescue: 13 cells up, none down (products Pagefind typo 83 → 87, FlexSearch wiki
+70 → 73, news 76 → 82), false fixes unchanged (a known one-word query finds something), notice
+rate on rows spelled correctly +0.2–1.1 points on FlexSearch and Pagefind only. OR engines
+never find nothing, so they are unchanged.
+
+### R10: only cheap edits? **No.** 24 cells block; false fixes fall a third (wiki 31 → 24,
+news 25 → 17, products 20 → 12) but typo rows lose 4–12 points and typo-uniform collapses
+(wiki FlexSearch 52 → 6): arbitrary one-letter mistakes are common in the guard set, and
+cheap edits cannot reach them.
+
+**Decisions:** the rescue ships with the unknown-word trigger, Persian-aware costs at
+distance 1, every word in the list, sound-alike swaps only at 3 letters, and suspects on.
+The options the arms needed (trigger, plain costs, distance 2, minimum count, 3-letter edits,
+maximum cost) and the sound-key wrapper are removed from the code; their configs are removed
+from bench/configs.ts (the runs stay in bench/data/runs), as in earlier phases.
+
+**After the decisions (before the final runs):** two fixes found while removing the arm
+options, measured by the final runs rather than by a new arm. (1) R9's rule as run also let a
+word the index knows but the word list lacks (an inflected form: «کتابخانه» next to the list's
+«کتابخانه‌ی») count as a suspect with count 0; a suspect is now a word of the list, as the
+hypothesis states. (2) The keyboard pass dropped a few more non-words: a letter key that types
+no letter on a layout (Shift+S → «»», a Latin model code «S70» → «»70») and a run with digits
+and fewer than three letters. Both only remove rewrites.

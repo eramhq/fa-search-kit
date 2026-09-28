@@ -145,6 +145,124 @@ fa.search(idx, "کتاب‌های من");      // not idx.search(): Lunr's query
 `fa.search` treats Lunr's query syntax (`: ~ ^ + - *`) as text, so a visitor's
 input never throws.
 
+## Query rescue: wrong keyboard, typos, sound-alike letters (optional)
+
+When the words as typed are a weak search, fa-search-kit can search fixed words instead
+and say so: *showing results for «دیجی کالا» · search «nd[d ;hgh» as typed*. It fixes a
+query typed with the keyboard on the wrong layout (`nd[d` → «دیجی», on the standard,
+legacy Windows and Mac layouts, and Persian letters that spell a Latin name back:
+«سشپسعدل» → samsung), and misspelled words: sound-alike letters (ت/ط, س/ص/ث, ز/ذ/ض/ظ,
+ه/ح, ق/غ), a neighbouring key, a missing or doubled letter, two letters swapped.
+
+Two separate questions decide it:
+- **Is a word on the site?** The search index answers, not a word list, so spellings the
+  analyzer already handles («کتابخانه» typed joined, «کتابهایم», Arabic ي) are never "fixed".
+- **What should it be?** The site's own words: a keyboard layout under which the query
+  becomes known words, else the closest word the site uses (costed for Persian: sound-alike
+  letters and neighbouring keys are cheap), most common first.
+
+A fix is kept only if the fixed search finds something. Everything is a separate import;
+a site that does not use it ships exactly what it did before.
+
+| entry | what | gzip |
+|---|---|---:|
+| `fa-search-kit/rescue` | `createRescue`, `rescueSearch` for any engine | core + 2.57 KB |
+| `fa-search-kit/pagefind/rescue` | Pagefind UI wiring | `/pagefind` + 3.05 KB (with rescue) |
+| `fa-search-kit/keyboard` | `keyboardCandidates(text)` on its own | 0.79 KB |
+| `fa-search-kit/rescue/build` | the site's word list, written in pieces (build time) | – |
+| `fa-search-kit/analytics` | `canonicalKey(query)` for search logs | core + 0.07 KB |
+
+### With an in-browser engine (Orama, MiniSearch, FlexSearch, Lunr)
+
+```js
+import { createAnalyzer } from "fa-search-kit";
+import { lexicon } from "fa-search-kit/lexicon";
+import { faMiniSearch } from "fa-search-kit/minisearch";
+import { createRescue } from "fa-search-kit/rescue";
+
+// One analyzer for the adapter and the rescue (verbs: "stem" where any query word may match).
+const analyzer = createAnalyzer({ profile: "full", lexicon, verbs: "stem" });
+const fa = faMiniSearch({ analyzer });
+const ms = new MiniSearch({ fields: ["title", "body"], ...fa });
+const rescue = createRescue({ analyzer });
+for (const doc of docs) { ms.add(doc); rescue.addText(`${doc.title} ${doc.body}`); }
+
+const { results, fix } = await rescue.rescueSearch((q) => ms.search(q), input);
+if (fix) showNotice(`نتیجه برای «${fix.to}»`, () => ms.search(fix.from));   // offer the text as typed
+```
+
+`addText` collects the index's terms (to tell known words) and the site's words (for the
+speller) in memory; nothing is downloaded.
+
+### With Pagefind
+
+Build the word list with the pages, next to Pagefind's folder:
+
+```sh
+npx fa-search-kit-pagefind dist --profile full --words    # writes dist/fa-words/
+npx pagefind --site dist
+```
+
+```js
+import { faPagefind } from "fa-search-kit/pagefind";
+import { rescuePagefindUI } from "fa-search-kit/pagefind/rescue";
+
+const fa = faPagefind({ profile: "full", lexicon });
+const rescue = rescuePagefindUI({ fa, profile: "full", lexicon, bundlePath: "/pagefind/", onNotice });
+const ui = new PagefindUI({ element: "#search", bundlePath: "/pagefind/", processTerm: rescue.processTerm, processResult: fa.processResult });
+rescue.attach(ui);
+
+function onNotice(n) {              // called on every search; undefined clears the notice
+  box.hidden = !n;
+  if (n) { box.querySelector("b").textContent = n.fixedTo; link.onclick = () => n.asTyped(); }
+}
+```
+
+Pagefind UI asks for the query synchronously, so the first search is as typed; meanwhile
+the rescue asks the UI's own `pagefind.js` whether each word is on the site (Pagefind
+silently drops words it does not know, so "no results" misses most typos), downloads only
+the word pieces the weak search needs (never on page load; a median of 3 KB on a 20,000-product shop, 18 KB on 20,000 long articles), and reruns
+the UI with the fix. Custom UIs on Pagefind's JS API use `createRescue` with
+`fetchWords("/fa-words/")` and `pagefindKnows(pagefind, fa)` from the same entry.
+
+### What it gets right, and what it gets wrong
+
+Recall@10 in %, test split, fa-full → with rescue (every query is a page's title words,
+rewritten the way people mistype):
+
+| variant | Pagefind | Orama | MiniSearch | FlexSearch | Lunr |
+|---|---|---|---|---|---|
+| sound-alike letter (wiki) | 11 → 89 | 28 → 94 | 29 → 94 | 1 → 92 | 29 → 94 |
+| neighbouring key (wiki) | 15 → 84 | 25 → 90 | 24 → 90 | 1 → 86 | 24 → 89 |
+| two letters swapped (products) | 6 → 82 | 58 → 88 | 60 → 88 | 0 → 82 | 59 → 89 |
+| a letter left out (wiki) | 30 → 55 | 26 → 55 | 24 → 54 | 4 → 39 | 24 → 53 |
+| English keyboard, standard layout (news) | 0 → 95 | 0 → 99 | 0 → 100 | 0 → 79 | 0 → 98 |
+| English keyboard, legacy Mac (wiki) | 0 → 70 | 1 → 72 | 1 → 73 | 0 → 66 | 1 → 72 |
+| Latin name typed on Persian (products) | 19 → 93 | 49 → 98 | 49 → 98 | 0 → 94 | 49 → 98 |
+
+No row gets worse (335 cells, none down), and correctly spelled queries are searched as
+typed 98–99.7% of the time.
+
+**MiniSearch**: also set its own `fuzzy: 0.2` (`searchOptions: { ...fa.searchOptions, fuzzy: 0.2 }`),
+with or without rescue; it passed the benchmark and adds to it. Orama's `tolerance` and Lunr's
+edit distance cost 8–21 points of ranking on Persian: leave them off.
+
+The cost: a real word that is **not on the site** but is one edit away from a site word
+is "fixed" too (24–59% of such words in the benchmark's guard set, depending on the site; names and Latin words far less; tokens with digits almost never); the notice and the "as typed" link are there for that.
+Typos that change the first letter into another letter group are not fixed (the word
+pieces are split by first letter). Full numbers and every decision:
+[bench/results/phase3.md](bench/results/phase3.md), [bench/results/experiments.md](bench/results/experiments.md) (Phase 3).
+
+### Search logs
+
+```js
+import { canonicalKey } from "fa-search-kit/analytics";
+canonicalKey("كتاب") === canonicalKey("کتاب") && canonicalKey("کتاب") === canonicalKey("کتابها");   // "1:کتاب"
+```
+
+The key carries a version prefix; keys change with the analyzer's profile and options and
+with package versions, so pass your analyzer (and your own prefix) and regroup when it changes.
+
 ## What the benchmark shows
 
 Known-item search over 20,000 Persian Wikipedia articles, 20,000 news articles and
@@ -164,15 +282,15 @@ adapter (full profile)**:
 | two differences at once (wiki) | 10 → 97 | 0 → 97 | 26 → 99 | 13 → 99 | 0 → 98 |
 
 Stock Orama and Lunr index no Persian at all (their tokenizers drop the letters).
-Full tables, the method and every decision: [bench/results/phase2.md](bench/results/phase2.md),
+Full tables, the method and every decision: [bench/results/phase3.md](bench/results/phase3.md) (query rescue), [bench/results/phase2.md](bench/results/phase2.md),
 [bench/results/phase1.md](bench/results/phase1.md), [bench/README.md](bench/README.md).
-Typos and wrong keyboard layouts are not handled yet (query rescue is the next phase).
+Typos and wrong keyboard layouts: see query rescue above.
 
 ## Demo
 
 `node demo/build.ts` builds a static site of 300 Persian Wikipedia articles and 300
 Digikala products with two search boxes side by side (stock Pagefind and Pagefind
-with fa-search-kit) and a replay of the benchmark's queries; `node demo/check.ts`
+with fa-search-kit and its query rescue) and a replay of the benchmark's queries; `node demo/check.ts`
 runs the replay headless, and `node demo/browser-check.ts` clicks through the page in
 headless Chrome. It needs the benchmark data (`bench/README.md`). The
 demo quotes CC BY-SA text, so it is CC BY-SA and never part of the package.

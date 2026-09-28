@@ -8,6 +8,11 @@
  *   queries through it first and has the engine split on whitespace, with its own
  *   (English-oriented) processing off.
  * - Otherwise the engine's own defaults (stock, tuned).
+ *
+ * With `fa.rescue` the search goes through fa-search-kit/rescue: `rescueSearch` around
+ * the engine's search, terms and words collected with `addText` (Pagefind: the word
+ * list built while annotating, known words probed with the index itself). The searcher
+ * reports each query's fix and the bytes of word pieces it needed.
  */
 import { create, insertMultiple, search as oramaSearch, type AnyOrama } from "@orama/orama";
 import FlexSearch from "flexsearch";
@@ -20,6 +25,11 @@ import { faMiniSearch } from "../src/adapters/minisearch.ts";
 import { faTokenizer } from "../src/adapters/orama.ts";
 import { faPagefind } from "../src/adapters/pagefind.ts";
 import { faPagefindIndex } from "../src/adapters/pagefind-build.ts";
+import { pagefindKnows } from "../src/adapters/pagefind-rescue.ts";
+import { adapterAnalyzer, queryTerms } from "../src/adapters/shared.ts";
+import type { Analyzer as FaAnalyzer } from "../src/analyzer.ts";
+import { createWordList } from "../src/rescue/build.ts";
+import { createRescue, fetchWords, type Rescue } from "../src/rescue/index.ts";
 import type { Config } from "./configs.ts";
 import type { Doc } from "./corpus.ts";
 import { buildPagefind } from "./lib/pagefind.ts";
@@ -29,6 +39,8 @@ export const TOP_K = 10;
 export interface Searcher {
   search(query: string): Promise<string[]>;
   close?(): Promise<void>;
+  /** With rescue: the last search's fixed query ("" when searched as typed) and the bytes of word pieces it needed. */
+  last?: { fixed: string; bytes: number };
 }
 
 export interface Engine {
@@ -51,15 +63,50 @@ const prepareQuery = (q: string, config: Config, anyWord = false) => {
 };
 const whitespace = (text: string) => text.split(" ").filter(Boolean);
 
+/**
+ * The analyzer a rescue config shares between the adapter and the rescue (the adapter's
+ * own default for this engine's verbs), or undefined: the adapter builds its own.
+ */
+function sharedAnalyzer(config: Config, verbs: "lemma" | "stem"): FaAnalyzer | undefined {
+  const fa = config.fa;
+  if (!fa?.rescue && !fa?.native) return undefined;
+  return adapterAnalyzer(fa.options, verbs);
+}
+
+/** A rescue as a site sets one up for an in-browser engine: terms and words from each doc. */
+function browserRescue(config: Config, analyzer: FaAnalyzer | undefined, docs: Doc[]): Rescue | undefined {
+  if (!config.fa?.rescue || !analyzer) return undefined;
+  const rescue = createRescue({ analyzer });
+  for (const d of docs) rescue.addText(`${d.title} ${d.body}`);
+  return rescue;
+}
+
+/** `search` through the rescue when there is one; records the fix and the word bytes it needed. */
+function rescued(search: (q: string) => Promise<string[]>, rescue?: Rescue, sizes?: Map<string, number>): Searcher {
+  if (!rescue) return { search };
+  const searcher: Searcher = {
+    last: { fixed: "", bytes: 0 },
+    async search(q) {
+      const r = await rescue.rescueSearch(search, q);
+      // A cold visitor's weak search downloads the list's manifest and the pieces it needs.
+      const pieces = r.fix?.pieces ?? [];
+      searcher.last = { fixed: r.fix?.to ?? "", bytes: pieces.length ? pieces.reduce((n, k) => n + (sizes?.get(k) ?? 0), sizes?.get("index.json") ?? 0) : 0 };
+      return r.results;
+    },
+  };
+  return searcher;
+}
+
 const minisearch: Engine = {
   name: "minisearch",
   async build(docs, config) {
     if (config.fa) {
-      const fa = faMiniSearch({ ...config.fa.options, combineWith: config.fa.combineWith });
+      const analyzer = sharedAnalyzer(config, config.fa.combineWith === "AND" ? "lemma" : "stem");
+      const fa = faMiniSearch({ ...config.fa.options, analyzer, combineWith: config.fa.combineWith });
       const ms = new MiniSearch<Doc>({ fields: ["title", "body"], idField: "id", ...fa });
       ms.addAll(docs);
-      const searchOptions = { ...fa.searchOptions, boost: { title: 2 } };
-      return { search: async (q) => ms.search(q, searchOptions).slice(0, TOP_K).map((r) => String(r.id)) };
+      const searchOptions = { ...fa.searchOptions, boost: { title: 2 }, ...(config.fa.native ? { fuzzy: 0.2 } : {}) };
+      return rescued(async (q) => ms.search(q, searchOptions).slice(0, TOP_K).map((r) => String(r.id)), browserRescue(config, analyzer, docs));
     }
     const options = config.analyzer
       ? { tokenize: whitespace, processTerm: (t: string) => t }
@@ -86,7 +133,8 @@ const minisearch: Engine = {
 const orama: Engine = {
   name: "orama",
   async build(docs, config) {
-    const tokenizer = config.fa ? faTokenizer({ ...config.fa.options, exactTerms: config.fa.exactTerms })
+    const analyzer = sharedAnalyzer(config, "stem");
+    const tokenizer = config.fa ? faTokenizer({ ...config.fa.options, analyzer, exactTerms: config.fa.exactTerms })
       : config.analyzer ? { language: "english", normalizationCache: new Map(), tokenize: whitespace }
       : config.tuned ? { language: "arabic" } : undefined;
     const db: AnyOrama = create({
@@ -95,15 +143,13 @@ const orama: Engine = {
     });
     const raw = !!config.fa;
     await insertMultiple(db, raw ? docs : prepare(docs, config, true), 5000);
-    return {
-      async search(q) {
-        const res = await oramaSearch(db, {
-          term: raw ? q : prepareQuery(q, config, true), properties: ["title", "body"], boost: { title: 2 }, limit: TOP_K,
-          ...(config.tuned ? { tolerance: 1 } : {}),
-        });
-        return res.hits.map((h) => String(h.id));
-      },
-    };
+    return rescued(async (q) => {
+      const res = await oramaSearch(db, {
+        term: raw ? q : prepareQuery(q, config, true), properties: ["title", "body"], boost: { title: 2 }, limit: TOP_K,
+        ...(config.tuned || config.fa?.native ? { tolerance: 1 } : {}),
+      });
+      return res.hits.map((h) => String(h.id));
+    }, browserRescue(config, analyzer, docs));
   },
 };
 
@@ -113,16 +159,17 @@ const flexsearch: Engine = {
     const { Document, Encoder } = FlexSearch;
     if (config.fa) {
       const document = { document: { id: "id", index: ["title", "body"] } };
+      const analyzer = sharedAnalyzer(config, "lemma");
+      const options = { ...config.fa.options, analyzer };
       const index = config.fa.flexDropIn
-        ? new Document({ ...document, encode: faEncode(config.fa.options) } as never)
-        : faDocument(FlexSearch, document, config.fa.options);
+        ? new Document({ ...document, encode: faEncode(options) } as never)
+        : faDocument(FlexSearch, document, options);
       for (const d of docs) index.add(d as never);
-      return {
-        async search(q) {
-          const res = index.search(q, { limit: TOP_K, merge: true } as never) as unknown as { id: string }[];
-          return res.slice(0, TOP_K).map((r) => String(r.id));
-        },
-      };
+      // FlexSearch has no edit-distance typo tolerance (R4 does not apply).
+      return rescued(async (q) => {
+        const res = index.search(q, { limit: TOP_K, merge: true } as never) as unknown as { id: string }[];
+        return res.slice(0, TOP_K).map((r) => String(r.id));
+      }, browserRescue(config, analyzer, docs));
     }
     const options: Record<string, unknown> = {};
     if (config.analyzer) options.encoder = new Encoder({ normalize: false, dedupe: false, split: /\s+/, numeric: false });
@@ -149,7 +196,8 @@ const lunrEngine: Engine = {
   name: "lunr",
   async build(docs, config) {
     if (config.fa) {
-      const fa = faLunr(lunr, config.fa.options);
+      const analyzer = sharedAnalyzer(config, "stem");
+      const fa = faLunr(lunr, { ...config.fa.options, analyzer });
       const idx = lunr(function () {
         this.use(fa);
         this.ref("id");
@@ -157,7 +205,12 @@ const lunrEngine: Engine = {
         this.field("body");
         for (const d of docs) this.add(d);
       });
-      return { search: async (q) => fa.search(idx, q).slice(0, TOP_K).map((r) => r.ref) };
+      // R4: fa.search has no edit-distance option; the same query with Lunr's own editDistance.
+      const fuzzy = (q: string) => {
+        const terms = queryTerms(analyzer!, q);
+        return terms.length ? idx.query((x) => { for (const t of terms) x.term(t, { usePipeline: false, editDistance: 1 }); }) : [];
+      };
+      return rescued(async (q) => (config.fa!.native ? fuzzy(q) : fa.search(idx, q)).slice(0, TOP_K).map((r) => r.ref), browserRescue(config, analyzer, docs));
     }
     if (config.tuned && !lunrArLoaded) {
       require("lunr-languages/lunr.stemmer.support")(lunr);
@@ -200,9 +253,11 @@ const pagefindEngine: Engine = {
     const lang = config.tuned ? "ar" : "fa";
     const html = (d: Doc) => `<!doctype html><html lang="${lang}"><body><h1>${escapeHtml(d.title)}</h1><p>${escapeHtml(d.body)}</p></body></html>`;
     const fa = config.fa;
+    const analyzer = sharedAnalyzer(config, "lemma");
+    const words = fa?.rescue ? createWordList() : undefined;
     const pf = await buildPagefind(async (index) => {
       if (fa) {
-        const errors = await faPagefindIndex({ ...fa.options, ...fa.pagefind }).addPages(index, docs.map((d) => ({ url: `/d/${d.id}/`, content: html(d) })));
+        const errors = await faPagefindIndex({ ...fa.options, ...fa.pagefind, analyzer, words }).addPages(index, docs.map((d) => ({ url: `/d/${d.id}/`, content: html(d) })));
         if (errors.length) throw new Error(`pagefind: ${errors.join("; ")}`);
         return;
       }
@@ -211,20 +266,27 @@ const pagefindEngine: Engine = {
         if (r.errors.length) throw new Error(`pagefind: ${r.errors.join("; ")}`);
       }
     }, lang);
-    const query = fa ? faPagefind(fa.options).processQuery : (q: string) => prepareQuery(q, config);
+    const query = fa ? faPagefind({ ...fa.options, analyzer }).processQuery : (q: string) => prepareQuery(q, config);
     const urls = new Map<string, string>();
-    return {
-      async search(q) {
-        const res = await pf.search(query(q));
-        const top = res.results.slice(0, TOP_K);
-        return Promise.all(top.map(async (r) => {
-          let url = urls.get(r.id);
-          if (!url) { url = (await r.data()).url; urls.set(r.id, url); }
-          return url.split("/").at(-2)!;
-        }));
-      },
-      close: () => pf.close(),
-    };
+    let rescue: Rescue | undefined, sizes: Map<string, number> | undefined;
+    if (fa?.rescue && words) {
+      // As a site: the built list fetched piece by piece (here from memory), known words probed with the index.
+      const files = words.files();
+      sizes = new Map([...files].map(([name, data]) => [name.split(".").slice(0, 2).join("."), data.length]));
+      const source = fetchWords("http://words.bench/", async (url) => new Response(files.get(String(url).split("/").pop()!) as Uint8Array<ArrayBuffer>));
+      const knows = pagefindKnows({ search: (q) => pf.search(q) }, faPagefind({ ...fa.options, analyzer }));
+      rescue = createRescue({ analyzer: analyzer!, words: source, isKnown: knows });
+    }
+    const searcher = rescued(async (q) => {
+      const res = await pf.search(query(q));
+      const top = res.results.slice(0, TOP_K);
+      return Promise.all(top.map(async (r) => {
+        let url = urls.get(r.id);
+        if (!url) { url = (await r.data()).url; urls.set(r.id, url); }
+        return url.split("/").at(-2)!;
+      }));
+    }, rescue, sizes);
+    return { ...searcher, search: (q) => searcher.search(q), get last() { return searcher.last; }, close: () => pf.close() };
   },
 };
 

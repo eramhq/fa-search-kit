@@ -181,6 +181,30 @@ Closure-style JSDoc does not type-check).
 - **Demo:** a static site (Astro or Hugo) with a Persian blog and product catalog, showing side-by-side "stock vs fa-search" search boxes that replay the benchmark queries.
 
 ### Phase 3: Query rescue (`/rescue`)
+
+**Status (2026-09-28): built and measured; the gate passes.** Results:
+[bench/results/phase3.md](bench/results/phase3.md) (test split, computed once), decisions
+R1–R10 in [bench/results/experiments.md](bench/results/experiments.md). All opt-in, new
+entries only (core and existing browser adapters bundle byte-identical):
+`fa-search-kit/rescue` (core + 2.57 KB), `/pagefind/rescue` (Pagefind UI wiring and
+`pagefindKnows`), `/keyboard` (0.79 KB), `/rescue/build` + CLI `--words`, `/analytics`
+(`canonicalKey`, core + 0.07 KB). fa-full → fa-rescue on test: 111 cells up, 0 down, 0
+blocking; e.g. wiki homophone Pagefind 11 → 89, FlexSearch 1 → 92; keyboard (standard
+layout) 0 → 79–100 on every engine; products Latin-on-Persian 19–49 → 93–98. Rows spelled
+correctly are rewritten 0.3–1.7% of the time; a weak Pagefind search downloads a median
+3.3–17.9 KB of word pieces (products → wiki, 20k pages each). Known cost: **false fixes of real
+words that are not on the site, 24–59%** (names 32–47%; Latin 0–5%, digits ≈ 0), measured by a
+new guard set; R1 (fix only when nothing is found) is the documented low-rewrite alternative.
+Adopted: unknown-word trigger, Persian-aware costs at distance 1, one keyboard layout per
+query, suspects when nothing is found (R9); MiniSearch's own `fuzzy: 0.2` recommended.
+Rejected with numbers: empty-only trigger, plain costs (but it wins typo-uniform by 2–7
+points), sound-alike index key, distance 2, min count 2, 3-letter edits, cheap edits only;
+Orama/Lunr native tolerance. Deviations: budgets rescue 2.6 KB (plan 2.5) and wiring 3.2 KB;
+Pagefind "known" is a word of the top result, not a result count (Pagefind matches unknown
+words by prefix). Demo: rescue in the fa box with notice, "as typed" link and KB downloaded;
+replay 31% → 93%; browser-checked (no-op `triggerSearch`, rerun with a filter, one pagefind.js
+instance). Open: first-letter typos across sound-alike classes; a way to tell unknown real
+words from typos without a big dictionary.
 - **Keyboard layout:**
   - Mapping tables for ISIRI 9147, legacy Windows KBDFA and Mac, in both directions.
   - Detect the mistake with a character n-gram "does this look like Persian or English?" score (the Rekey/Punto approach).

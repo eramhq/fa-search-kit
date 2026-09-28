@@ -11,6 +11,12 @@ evaluation only. This file lists every piece of data that ends up in the bundles
 | Keep list (1,040 words) | `src/lexicon/data.ts` `KEEP` | **selected by rules from word counts** (see below) | see below |
 | Protected words (23) | `src/words.ts` `PROTECTED` | Snowball's own ان exceptions (folded) + words selected like the keep list, + 2 by hand | see below |
 | Joined-«می» exceptions (46 entries) | `src/words.ts` `MI_EXCEPTIONS` | selected by rules from word counts | see below |
+| Keyboard layouts (3 × 48 keys) | `src/rescue/keyboard.ts` `LAYOUTS` | which key types which letter: the ISIRI 9147 standard (table 1) and the layouts the OSes ship (Windows kbdfar/kbdfa KLC dumps, macOS layouts read with `UCKeyTranslate`); full reference with sources in `bench/lib/keyboards.ts`, checked key by key in `test/rescue.test.ts` | facts about the layouts, no copied files (project's own, MIT) |
+| Sound-alike letter groups, keyboard rows | `src/rescue/speller.ts` | ordinary facts about Persian spelling and the ISIRI 9147 layout, written by hand | project's own (MIT) |
+
+Query rescue's word list (`fa-search-kit/rescue/build`, the CLI's `--words`) is built
+by each site from its own pages at build time and served with the site; the package
+ships no word list.
 
 ## The word lists selected from counts
 

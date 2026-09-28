@@ -8,9 +8,10 @@
  * Needs the benchmark data (bench/data/, see bench/README.md). Picks ~300
  * Wikipedia articles and ~300 Digikala products from the benchmark corpora,
  * preferring targets of benchmark queries so the replay panel has answers, and
- * writes one page each with its source credited. Then two Pagefind indexes from
- * the same pages: `pagefind-stock/` (Pagefind's defaults) and `pagefind-fa/`
- * (pages annotated by fa-search-kit/pagefind/build, full profile).
+ * writes one page each with its source credited (and a source filter). Then two
+ * Pagefind indexes from the same pages: `pagefind-stock/` (Pagefind's defaults) and
+ * `pagefind-fa/` (pages annotated by fa-search-kit/pagefind/build, full profile), plus
+ * the word list query rescue downloads piece by piece (`fa-words/`, next to it).
  *
  * Licence: the pages quote Wikipedia (CC BY-SA 3.0) and Digikala product titles;
  * the built demo is CC BY-SA and is never bundled with the package.
@@ -19,6 +20,7 @@ import { build as esbuild } from "esbuild";
 import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { parseArgs } from "node:util";
 import { faPagefindIndex } from "../src/adapters/pagefind-build.ts";
+import { createWordList } from "../src/rescue/build.ts";
 import { lexicon } from "../src/lexicon/index.ts";
 import { loadCorpus, type CorpusName, type Doc } from "../bench/corpus.ts";
 import { loadQueries, type Query } from "../bench/queries.ts";
@@ -28,8 +30,9 @@ const { values } = parseArgs({ options: { per: { type: "string", default: "300" 
 const PER = Number(values.per);
 const DIST = new URL("dist/", import.meta.url);
 const SRC = new URL("src/", import.meta.url);
-/** Variant types the replay shows: what an analyzer can fix (typos and layouts are Phase 3). */
-const REPLAY_TYPES = ["canonical", "std-typing", "arabic-yk", "alef-madda", "hamza", "heh-yeh", "diacritics", "digits", "zwnj-space", "zwnj-join", "zwnj-add", "plural-add", "plural-drop", "clitic-add", "combo"];
+/** Variant types the replay shows: what the analyzer fixes, then what query rescue fixes. */
+const REPLAY_TYPES = ["canonical", "std-typing", "arabic-yk", "alef-madda", "hamza", "heh-yeh", "diacritics", "digits", "zwnj-space", "zwnj-join", "zwnj-add", "plural-add", "plural-drop", "clitic-add", "combo",
+  "homophone", "typo-adjacent", "typo-delete", "typo-transpose", "layout-isiri9147", "layout-win-legacy", "layout-mac-legacy", "layout-latin-on-fa"];
 const SOURCES: Record<"wiki" | "products", { label: string; link(d: Doc): string; credit: string }> = {
   wiki: {
     label: "ویکی‌پدیا",
@@ -83,7 +86,7 @@ for (const corpus of ["wiki", "products"] as const) {
     urls.set(d.id, url);
     const body = `<header class="site"><a href="../../">بازگشت به جست‌وجو</a> · ${src.label}</header>
 <main>
-<article data-pagefind-body>
+<article data-pagefind-body data-pagefind-filter="منبع:${src.label}">
 <h1>${esc(d.title)}</h1>
 <p>${esc(d.body)}</p>
 </article>
@@ -113,15 +116,19 @@ await esbuild({
 
 // Two Pagefind indexes over the same pages.
 const pagefind = await import("pagefind");
+const words = createWordList();
 for (const [name, annotate] of [["pagefind-stock", false], ["pagefind-fa", true]] as const) {
   const { index } = await pagefind.createIndex({ forceLanguage: "fa" });
   if (!index) throw new Error("pagefind: createIndex failed");
   const errors = annotate
-    ? await faPagefindIndex({ profile: "full", lexicon }).addPages(index, pages)
+    ? await faPagefindIndex({ profile: "full", lexicon, words }).addPages(index, pages)
     : (await Promise.all(pages.map((p) => index.addHTMLFile(p)))).flatMap((r) => r.errors);
   if (errors.length) throw new Error(errors.join("; "));
   await index.writeFiles({ outputPath: new URL(name, DIST).pathname });
   console.log(`${name}: ${pages.length} pages`);
 }
 await pagefind.close();
+// Next to pagefind-fa/, where rescuePagefindUI looks by default (`../fa-words/` from the bundle).
+const bytes = words.write(new URL("fa-words", DIST).pathname);
+console.log(`fa-words: ${(bytes / 1024).toFixed(1)} KB in ${words.files().size - 1} pieces`);
 console.log(`wrote ${DIST.pathname}`);

@@ -38,6 +38,26 @@
       "types": "./dist/src/adapters/lunr.d.ts",
       "default": "./dist/src/adapters/lunr.js"
     },
+    "./keyboard": {
+      "types": "./dist/src/rescue/keyboard.d.ts",
+      "default": "./dist/src/rescue/keyboard.js"
+    },
+    "./rescue": {
+      "types": "./dist/src/rescue/index.d.ts",
+      "default": "./dist/src/rescue/index.js"
+    },
+    "./rescue/build": {
+      "types": "./dist/src/rescue/build.d.ts",
+      "default": "./dist/src/rescue/build.js"
+    },
+    "./pagefind/rescue": {
+      "types": "./dist/src/adapters/pagefind-rescue.d.ts",
+      "default": "./dist/src/adapters/pagefind-rescue.js"
+    },
+    "./analytics": {
+      "types": "./dist/src/analytics.d.ts",
+      "default": "./dist/src/analytics.js"
+    },
     "./package.json": "./package.json"
   },
   "bin": {
@@ -56,7 +76,9 @@
     "orama",
     "minisearch",
     "flexsearch",
-    "lunr"
+    "lunr",
+    "spelling",
+    "keyboard-layout"
   ],
   "engines": {
     "node": ">=22"

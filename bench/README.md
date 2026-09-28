@@ -20,6 +20,9 @@ node bench/conflation.ts --configs snowball,fa-standard  # UD gold lemmas: under
 node bench/collisions.ts               # what each fold rule merges (vocabulary pairs)
 node bench/rejoin.ts                   # the tokenizer's rejoin rules on UD sentences
 node bench/excerpts.ts                 # Pagefind excerpts under the adapter (P1)
+node bench/rescue-queries.ts           # Phase 3 extra set: false-fix guards, typo-uniform
+node bench/run.ts --config fa-full,fa-rescue --set rescue   # runs over the extra set
+node bench/rescue-report.ts --split dev                     # query rescue at a glance
 node demo/build.ts && node demo/check.ts   # the demo site and its replay, headless
 node demo/browser-check.ts             # the demo page itself, in headless Chrome
 ```
@@ -101,6 +104,13 @@ Rules that keep the variants honest:
   variant rows, never in the canonical row.
 - Everything is seeded (`SEED = 20260926`, plus a per-document, per-type sub-seed),
   so the query files are identical on every machine.
+- Phase 3's extra set (`bench/lib/rescue-sets.ts`, `data/queries/<corpus>.rescue.jsonl`)
+  is kept apart so every cached main run stays valid: six false-fix guards (one-word
+  queries fine as typed but not on the site: real words, 2–3-letter words, Latin names,
+  tokens with digits, UD proper names, inflected forms of site words; a rewrite is a false
+  fix) and typo-uniform (dev only: one letter of a content word, the first included,
+  replaced by a uniformly random letter, so the speller's cost tables do not also write the
+  test).
 - Keyboard tables (`bench/lib/keyboards.ts`) were generated from the layouts
   themselves (Windows KLC exports, xkeyboard-config, and macOS via `UCKeyTranslate`),
   and the ISIRI 9147 standard's own PDF. Sources are listed in the file.
@@ -125,6 +135,7 @@ Each indexes `title` and `body`, with a title boost of 2 where the engine has on
 | fa-standard | `profile: "standard"`: + Snowball with fa-search-kit's fixes (closed-suffix split, joined «می» rule, derivational suffixes kept, compounds' parts and the other half-space spelling indexed) |
 | fa-full | `profile: "full"` + `fa-search-kit/lexicon`: + verbs, keep list, clitics, broken plurals; verb lemmas for Pagefind and FlexSearch, tense-keeping stems for MiniSearch, Orama and Lunr (bench/results/experiments.md, H10) |
 | p1-light / p1-standard / p1-full | the same profiles through Phase 1's bench wiring (below); the Phase 2 gate's baseline |
+| fa-rescue | fa-full + query rescue (`fa-search-kit/rescue`), as a site sets it up: in-browser engines call `rescue.addText` next to indexing and search through `rescueSearch`; Pagefind builds the word list while annotating (`words` option), fetches its pieces from memory, and asks the index itself whether a word is known (`pagefindKnows`). Each run also records, per query, the query searched instead and the word bytes it needed |
 
 Since Phase 2 the fa-* configs run **through the shipped adapters** (`src/adapters/`),
 as a site would set them up: Orama gets `faTokenizer()`, MiniSearch `faMiniSearch()`,

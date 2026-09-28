@@ -2,8 +2,12 @@
  * The demo in a real browser: serves demo/dist, opens it in headless Chrome
  * (DevTools protocol, no dependencies), clicks every example search, and fails on
  * a console error, a failed request, an example that finds nothing with
- * fa-search-kit, or a leaked meta tag under a result. Screenshots go to
- * demo/dist/screenshots/.
+ * fa-search-kit, or a leaked meta tag under a result. Then query rescue in Pagefind
+ * UI: `triggerSearch` with the same text does nothing (so the rescue's trailing-space
+ * rerun is needed), a wrong-keyboard search reruns with the fix and shows the notice,
+ * "as typed" searches the text as typed, a rerun keeps a selected filter, and the
+ * rescue shares the UI's pagefind.js (one instance: its files are fetched once).
+ * Screenshots go to demo/dist/screenshots/.
  *
  *     node demo/build.ts && node demo/browser-check.ts
  *
@@ -40,11 +44,13 @@ await new Promise((r) => ws.addEventListener("open", r));
 let seq = 0;
 const pending = new Map<number, (m: { result?: { result?: { value?: unknown }; data?: string } }) => void>();
 const problems: string[] = [];
+const requested: string[] = [];
 ws.addEventListener("message", (e) => {
   const m = JSON.parse(String(e.data));
   pending.get(m.id)?.(m);
   if (m.method === "Runtime.exceptionThrown") problems.push(`exception: ${m.params.exceptionDetails.exception?.description ?? m.params.exceptionDetails.text}`);
   if (m.method === "Runtime.consoleAPICalled" && m.params.type === "error") problems.push(`console.error: ${m.params.args.map((a: { value?: string; description?: string }) => a.value ?? a.description).join(" ")}`);
+  if (m.method === "Network.requestWillBeSent") requested.push(m.params.request.url);
   if (m.method === "Network.responseReceived" && m.params.response.status >= 400 && !/favicon|fonts\.g/.test(m.params.response.url)) problems.push(`HTTP ${m.params.response.status}: ${m.params.response.url}`);
 });
 const send = (method: string, params: object = {}) => new Promise<{ result?: { result?: { value?: unknown }; data?: string } }>((r) => { const id = ++seq; pending.set(id, r); ws.send(JSON.stringify({ id, method, params })); });
@@ -55,6 +61,7 @@ for (const method of ["Runtime.enable", "Page.enable", "Network.enable"]) await 
 await send("Emulation.setDeviceMetricsOverride", { width: 1280, height: 1400, deviceScaleFactor: 1, mobile: false });
 await send("Page.navigate", { url: origin });
 await sleep(2500);
+const atLoad = requested.length;
 
 const examples = await evaluate<string[]>(`return [...document.querySelectorAll("button[data-q]")].map((b) => b.dataset.q);`);
 let failed = 0;
@@ -74,6 +81,59 @@ for (const [i, q] of examples.entries()) {
   console.log(`${ok ? "ok  " : "FAIL"} «${q}»  stock: ${r.stock} | fa-search-kit: ${r.fa}${r.tags ? ` | ${r.tags} meta tags shown` : ""}`);
   if (i === 0) await shot("example.png");
 }
+
+// --- query rescue in Pagefind UI ---------------------------------------------------
+const check = (name: string, ok: boolean, detail = "") => { console.log(`${ok ? "ok  " : "FAIL"} ${name}${detail ? `: ${detail}` : ""}`); if (!ok) failed++; };
+const helpers = `
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  const input = document.querySelector("#q");
+  const type = (q) => { input.value = q; input.dispatchEvent(new Event("input")); };
+  const notice = () => document.querySelector("#fa-notice");
+  const waitFor = async (f) => { for (let i = 0; i < 60 && !f(); i++) await sleep(150); return f(); };
+  const results = () => [...document.querySelectorAll("#fa .pagefind-ui__result-link")].map((a) => a.getAttribute("href"));`;
+
+const noop = await evaluate<{ same: number; space: number }>(`${helpers}
+  type("کتاب");
+  await waitFor(() => document.querySelector("#fa .pagefind-ui__message")?.textContent.includes("کتاب"));
+  await sleep(800);
+  const d = window.faDemo, before = d.calls;
+  d.faUI.triggerSearch("کتاب"); await sleep(1000);
+  const same = d.calls - before;
+  d.faUI.triggerSearch("کتاب "); await sleep(1000);
+  return { same, space: d.calls - before - same };`);
+check("triggerSearch with the same text does nothing; a trailing space searches again", noop.same === 0 && noop.space > 0, JSON.stringify(noop));
+
+const fixed = await evaluate<{ notice: string; results: number; message: string }>(`${helpers}
+  type("nd[d ;hgh");
+  await waitFor(() => !notice().hidden && results().length);
+  return { notice: notice().hidden ? "" : notice().textContent, results: results().length, message: document.querySelector("#fa .pagefind-ui__message")?.textContent ?? "" };`);
+check("a wrong-keyboard search reruns with the fix and shows the notice", fixed.results > 0 && fixed.notice.includes("دیجی"), `${fixed.notice} | ${fixed.message}`);
+await shot("rescue.png");
+
+const typed = await evaluate<{ hidden: boolean; message: string }>(`${helpers}
+  document.querySelector("#fa-notice .as-typed").click();
+  await waitFor(() => notice().hidden);
+  await sleep(800);
+  return { hidden: notice().hidden, message: document.querySelector("#fa .pagefind-ui__message")?.textContent ?? "" };`);
+check("“as typed” searches the text as typed and hides the notice", typed.hidden, typed.message);
+
+const filtered = await evaluate<{ checked: boolean; notice: string; urls: string[] }>(`${helpers}
+  type("دیکتاتور"); await sleep(1500);
+  const wiki = () => [...document.querySelectorAll("#fa .pagefind-ui__filter-checkbox")].find((c) => c.value === "ویکی\u200cپدیا");
+  const box = await waitFor(wiki);
+  if (!box) return { checked: false, notice: "", urls: [] };
+  box.click(); await sleep(1000);
+  type("دیکتتاور");
+  await waitFor(() => !notice().hidden && results().length);
+  return { checked: box.checked, notice: notice().hidden ? "" : notice().textContent, urls: results() };`);
+check("the rerun keeps a selected filter", filtered.checked && filtered.urls.length > 0 && filtered.urls.every((u) => u.includes("/wiki/")) && filtered.notice.includes("دیکتاتور"), `${filtered.notice} | ${filtered.urls.length} results`);
+
+const once = (path: string) => requested.filter((u) => u.includes(path)).length;
+// Each pagefind.js instance starts its own worker (whose own fetches this page-level log does not see).
+check("the rescue shares the UI's pagefind.js (one instance)", once("pagefind-fa/pagefind.js") === 1 && once("pagefind-fa/pagefind-worker.js") === 1,
+  `pagefind.js ${once("pagefind-fa/pagefind.js")}×, pagefind-worker.js ${once("pagefind-fa/pagefind-worker.js")}×`);
+check("word pieces are never downloaded on page load, only by weak searches", !requested.slice(0, atLoad).some((u) => u.includes("/fa-words/")) && requested.some((u) => u.includes("/fa-words/")));
+
 await send("Emulation.setEmulatedMedia", { features: [{ name: "prefers-color-scheme", value: "dark" }] });
 await shot("example-dark.png");
 
@@ -81,5 +141,5 @@ ws.close();
 chrome.kill();
 server.close();
 for (const p of problems) console.log(`FAIL ${p}`);
-console.log(`${examples.length} examples, ${failed + problems.length} problem(s); screenshots in demo/dist/screenshots/`);
+console.log(`${examples.length} examples and 6 rescue checks, ${failed + problems.length} problem(s); screenshots in demo/dist/screenshots/`);
 process.exit(failed + problems.length ? 1 : 0);

@@ -42,7 +42,7 @@ try {
   const subpaths = Object.keys(pkg.exports).filter((k) => k !== "./package.json");
   for (const sub of subpaths) {
     const spec = sub === "." ? "fa-search-kit" : `fa-search-kit/${sub.slice(2)}`;
-    const node = sub === "./pagefind/build";
+    const node = sub === "./pagefind/build" || sub === "./rescue/build";
     writeFileSync(join(dir, "entry.mjs"), `export * from "${spec}";\n`);
     run("npx", ["esbuild", "entry.mjs", "--bundle", "--format=esm", `--platform=${node ? "node" : "browser"}`, "--outfile=out.js", "--log-level=error"]);
     console.log(`ok ${spec}`);
@@ -65,8 +65,9 @@ try {
   step("CLI over a tiny site, then Pagefind");
   mkdirSync(join(dir, "site/a"), { recursive: true });
   writeFileSync(join(dir, "site/a/index.html"), `<!doctype html><html lang="fa"><body><h1>كتابهاي قديمي</h1></body></html>`);
-  process.stdout.write(run("npx", ["fa-search-kit-pagefind", "site", "--profile", "full"]));
+  process.stdout.write(run("npx", ["fa-search-kit-pagefind", "site", "--profile", "full", "--words"]));
   if (!readFileSync(join(dir, "site/a/index.html"), "utf8").includes("data-fa-search")) throw new Error("CLI did not annotate");
+  if (!JSON.parse(readFileSync(join(dir, "site/fa-words/index.json"), "utf8")).keys.length) throw new Error("CLI wrote no word list");
   process.stdout.write(run("npx", ["pagefind", "--site", "site", "--silent"]) || "pagefind ok\n");
 
   console.log("\nsmoke-pack: all passed");
@@ -91,6 +92,11 @@ import { faDocument, faEncode } from "fa-search-kit/flexsearch";
 import { faLunr } from "fa-search-kit/lunr";
 import { faPagefind } from "fa-search-kit/pagefind";
 import { faPagefindIndex } from "fa-search-kit/pagefind/build";
+import { createRescue } from "fa-search-kit/rescue";
+import { createWordList } from "fa-search-kit/rescue/build";
+import { keyboardCandidates } from "fa-search-kit/keyboard";
+import { rescuePagefindUI } from "fa-search-kit/pagefind/rescue";
+import { canonicalKey } from "fa-search-kit/analytics";
 
 const docs = [{ id: "a", title: "كتابهاي قديمي" }, { id: "b", title: "ماشین قرمز" }];
 const q = "کتاب";
@@ -128,6 +134,19 @@ assert.ok(files.length > 0);
 await pagefind.close();
 assert.equal(faPagefind().processQuery("كتابهاي"), q);
 console.log("ok pagefind (index built; query " + faPagefind().processQuery("كتابهاي") + ")");
+
+assert.ok(keyboardCandidates("nd[d").includes("دیجی"));
+assert.equal(canonicalKey("كتابها"), canonicalKey("کتاب"));
+const rescue = createRescue({ analyzer: createAnalyzer() });
+for (const d of docs) rescue.addText(d.title);
+const r = await rescue.rescueSearch((t) => ms.search(t), "ماشین غرمز");
+assert.equal(r.results[0]?.id, "b");
+assert.equal(r.fix?.to, "ماشین قرمز");
+const words = createWordList();
+words.add("کتاب قدیمی");
+assert.ok(words.files().has("index.json"));
+assert.equal(typeof rescuePagefindUI, "function");
+console.log("ok rescue, keyboard, analytics (fixed «ماشین غرمز» → «" + r.fix.to + "»)");
 `;
 
 const CONSUMER = `
@@ -139,6 +158,11 @@ import { faDocument, faEncode } from "fa-search-kit/flexsearch";
 import { faLunr } from "fa-search-kit/lunr";
 import { faPagefind, type PagefindResultData } from "fa-search-kit/pagefind";
 import { faPagefindIndex } from "fa-search-kit/pagefind/build";
+import { createRescue, fetchWords, type Fix, type RescueResult } from "fa-search-kit/rescue";
+import { createWordList } from "fa-search-kit/rescue/build";
+import { keyboardCandidates } from "fa-search-kit/keyboard";
+import { rescuePagefindUI, type PagefindNotice } from "fa-search-kit/pagefind/rescue";
+import { canonicalKey } from "fa-search-kit/analytics";
 import MiniSearch from "minisearch";
 import lunr from "lunr";
 import FlexSearch from "flexsearch";
@@ -155,7 +179,13 @@ const idx = lunr(function (this: lunr.Builder) { this.use(fl); this.ref("id"); t
 const hits: lunr.Index.Result[] = fl.search(idx, "کتاب");
 const r: PagefindResultData = faPagefind().processResult({ content: "", excerpt: "" });
 const html: string = faPagefindIndex({ lexicon, terms: "all" }).annotateHtml("<p>x</p>");
-export { doc, hits, r, html };
+const rescue = createRescue({ analyzer: a, words: fetchWords("https://example.com/fa-words/") });
+const found: Promise<RescueResult<string>> = rescue.rescueSearch((q: string) => [q], "کتاب");
+const fix: Fix | undefined = undefined;
+const list = createWordList({ analyzer: a });
+const ui = rescuePagefindUI({ fa: faPagefind(), lexicon, bundlePath: "/pagefind/", onNotice: (n?: PagefindNotice) => n?.asTyped() });
+const k: string = canonicalKey("کتاب", { analyzer: a }) + keyboardCandidates("nd[d").join();
+export { doc, hits, r, html, found, fix, list, ui, k };
 `;
 
 await main();
