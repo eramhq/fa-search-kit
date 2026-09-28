@@ -292,7 +292,8 @@ Typos and wrong keyboard layouts: see query rescue above.
 Digikala products with two search boxes side by side (stock Pagefind and Pagefind
 with fa-search-kit and its query rescue) and a replay of the benchmark's queries; `node demo/check.ts`
 runs the replay headless, and `node demo/browser-check.ts` clicks through the page in
-headless Chrome. It needs the benchmark data (`bench/README.md`). The
+headless Chrome. It needs the benchmark data (`bench/README.md`). Pages and queries about
+religion, politics, war and other sensitive topics are left out of the demo. The
 demo quotes CC BY-SA text, so it is CC BY-SA and never part of the package.
 
 ## Data and licence

@@ -112,7 +112,8 @@ export function fetchWords(dir: string | URL, fetcher: typeof fetch = (...a) => 
   const cache = new Map<string, Promise<Piece | undefined>>();
   let manifest: Promise<Manifest> | undefined, bytes = 0;
   const get = async (file: string) => {
-    const res = await fetcher(base + file);
+    // The manifest keeps its name across rebuilds: always revalidate it (pieces carry the hash).
+    const res = await fetcher(base + file, file === "index.json" ? { cache: "no-cache" } : undefined);
     if (!res.ok) throw new Error(`${res.status} ${base + file}`);
     const buf = new Uint8Array(await res.arrayBuffer());
     bytes += buf.length;

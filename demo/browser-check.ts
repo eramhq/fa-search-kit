@@ -118,15 +118,25 @@ const typed = await evaluate<{ hidden: boolean; message: string }>(`${helpers}
 check("“as typed” searches the text as typed and hides the notice", typed.hidden, typed.message);
 
 const filtered = await evaluate<{ checked: boolean; notice: string; urls: string[] }>(`${helpers}
-  type("دیکتاتور"); await sleep(1500);
+  type("هوای فشرده"); await sleep(1500);
   const wiki = () => [...document.querySelectorAll("#fa .pagefind-ui__filter-checkbox")].find((c) => c.value === "ویکی\u200cپدیا");
   const box = await waitFor(wiki);
   if (!box) return { checked: false, notice: "", urls: [] };
   box.click(); await sleep(1000);
-  type("دیکتتاور");
+  type("هوای فشدره");
   await waitFor(() => !notice().hidden && results().length);
   return { checked: box.checked, notice: notice().hidden ? "" : notice().textContent, urls: results() };`);
-check("the rerun keeps a selected filter", filtered.checked && filtered.urls.length > 0 && filtered.urls.every((u) => u.includes("/wiki/")) && filtered.notice.includes("دیکتاتور"), `${filtered.notice} | ${filtered.urls.length} results`);
+check("the rerun keeps a selected filter", filtered.checked && filtered.urls.length > 0 && filtered.urls.every((u) => u.includes("/wiki/")) && filtered.notice.includes("فشرده"), `${filtered.notice} | ${filtered.urls.length} results`);
+
+// The replay panel: runs to the end, with a row per variant type and no error.
+const t0 = Date.now();
+const replay = await evaluate<{ status: string; rows: number; seconds: number; progress: string[] }>(`${helpers}
+  document.querySelector("#run-replay").click();
+  const status = document.querySelector("#replay-status"), progress = [];
+  for (let i = 0; i < 1200 && !status.textContent.includes("تمام"); i++) { await sleep(500); if (i % 20 === 0) progress.push(status.textContent); }
+  return { status: status.textContent, rows: document.querySelectorAll("#replay-table tbody tr").length, seconds: 0, progress };`);
+check("the replay runs to the end", replay.status.includes("تمام") && replay.rows >= 15, `${replay.rows} rows in ${Math.round((Date.now() - t0) / 1000)} s; ${replay.status}; progress: ${replay.progress.slice(0, 6).join(" | ")}`);
+await shot("replay.png");
 
 const once = (path: string) => requested.filter((u) => u.includes(path)).length;
 // Each pagefind.js instance starts its own worker (whose own fetches this page-level log does not see).
@@ -141,5 +151,5 @@ ws.close();
 chrome.kill();
 server.close();
 for (const p of problems) console.log(`FAIL ${p}`);
-console.log(`${examples.length} examples and 6 rescue checks, ${failed + problems.length} problem(s); screenshots in demo/dist/screenshots/`);
+console.log(`${examples.length} examples, 6 rescue checks and the replay, ${failed + problems.length} problem(s); screenshots in demo/dist/screenshots/`);
 process.exit(failed + problems.length ? 1 : 0);

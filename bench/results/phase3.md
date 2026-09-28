@@ -106,7 +106,7 @@ rows, fa-full → fa-rescue:
 - **Word bytes** a weak Pagefind search downloads, gzipped, for a cold visitor (manifest +
   pieces): products (20,000 short product pages) median 3.3 KB, p95 6.2 KB; news (20,000
   articles) 9.2 / 23.0 KB; wiki (20,000 long articles) 17.9 / 58.3 KB. Never on page load. The
-  demo's 600 pages: 4.1 / 8.5 KB.
+  demo's 600 pages: 4.0 / 7.8 KB.
 - **False fixes** (queries fine as typed but not on the site; % rewritten, Pagefind –
   in-browser engines):
 

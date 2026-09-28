@@ -17,27 +17,28 @@
 <header class="hero">
   <h1>جست‌وجوی فارسی، همان‌طور که مردم می‌نویسند</h1>
   <p class="lede">
-    یک سایت با ۶۰۰ صفحه (مقاله‌های ویکی‌پدیا و کالاهای دیجی‌کالا) و دو جست‌وجو روی آن:
-    Pagefind همان‌طور که هست، و Pagefind با <strong>fa-search-kit</strong>.
-    یک بار بنویسید، نتیجهٔ هر دو را کنار هم ببینید؛ حتی با غلط تایپی یا وقتی صفحه‌کلید روی انگلیسی مانده است.
+    یک سایت نمونه با ۶۰۰ صفحه از ویکی‌پدیا و دیجی‌کالا، و دو جست‌وجو روی همان صفحه‌ها:
+    Pagefind بدون تغییر، و Pagefind با <strong>fa-search-kit</strong>.
+    هر چه بنویسید در هر دو جست‌وجو می‌شود؛ با ی و ک عربی، بی‌نیم‌فاصله، با غلط تایپی،
+    یا وقتی صفحه‌کلید روی انگلیسی مانده است.
   </p>
   <form class="search" role="search" onsubmit="return false">
     <label for="q" class="visually-hidden">جست‌وجو</label>
     <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="10" cy="10" r="6.5"/><path d="M15 15l6 6"/></svg>
-    <input id="q" type="search" autocomplete="off" spellcheck="false" placeholder="یک کلمه بنویسید، مثلاً کفش یا ایران">
+    <input id="q" type="search" autocomplete="off" spellcheck="false" placeholder="چیزی بنویسید؛ مثلاً کفش یا کتاب">
   </form>
   <div class="examples">
-    <span class="examples-title">یا یکی از این‌ها را امتحان کنید:</span>
+    <span class="examples-title">چند نمونه:</span>
     <ul>
-      <li><button type="button" data-q="كيف">كيف<small>با صفحه‌کلید عربی</small></button></li>
-      <li><button type="button" data-q="كفش">كفش<small>با صفحه‌کلید عربی</small></button></li>
-      <li><button type="button" data-q="کفش های مردانه">کفش های مردانه<small>با فاصله</small></button></li>
+      <li><button type="button" data-q="كيف">كيف<small>ی و ک عربی</small></button></li>
+      <li><button type="button" data-q="كفش">كفش<small>ک عربی</small></button></li>
+      <li><button type="button" data-q="کفش های مردانه">کفش های مردانه<small>فاصله به‌جای نیم‌فاصله</small></button></li>
       <li><button type="button" data-q="رمانهای">رمانهای<small>بدون نیم‌فاصله</small></button></li>
-      <li><button type="button" data-q="بچه ها">بچه ها<small>با فاصله</small></button></li>
-      <li><button type="button" data-q="فيلم">فيلم<small>با ي عربی</small></button></li>
-      <li><button type="button" data-q="nd[d ;hgh">nd[d ;hgh<small>صفحه‌کلید انگلیسی</small></button></li>
-      <li><button type="button" data-q="دیکتتاور">دیکتتاور<small>دو حرف جابه‌جا</small></button></li>
-      <li><button type="button" data-q="دفطر نویسندگی">دفطر نویسندگی<small>ط به‌جای ت</small></button></li>
+      <li><button type="button" data-q="بچه ها">بچه ها<small>فاصله به‌جای نیم‌فاصله</small></button></li>
+      <li><button type="button" data-q="فيلم">فيلم<small>ی عربی</small></button></li>
+      <li><button type="button" data-q="nd[d ;hgh">nd[d ;hgh<small>صفحه‌کلید روی انگلیسی</small></button></li>
+      <li><button type="button" data-q="هوای فشدره">هوای فشدره<small>دو حرف جابه‌جا</small></button></li>
+      <li><button type="button" data-q="ساعط مچی">ساعط مچی<small>ط به‌جای ت</small></button></li>
     </ul>
   </div>
 </header>
@@ -45,35 +46,35 @@
 <main class="columns">
   <section class="column stock" aria-labelledby="stock-title">
     <h2 id="stock-title">Pagefind بدون تغییر</h2>
-    <p class="empty">نتیجه‌ها اینجا می‌آیند.</p>
+    <p class="empty">نتیجه‌ها اینجا نشان داده می‌شوند.</p>
     <div id="stock"></div>
   </section>
   <section class="column fa" aria-labelledby="fa-title">
     <h2 id="fa-title">Pagefind با fa-search-kit</h2>
-    <p class="empty">نتیجه‌ها اینجا می‌آیند.</p>
+    <p class="empty">نتیجه‌ها اینجا نشان داده می‌شوند.</p>
     <p id="fa-notice" class="notice" hidden aria-live="polite"></p>
     <div id="fa"></div>
   </section>
 </main>
 
 <section class="replay" aria-labelledby="replay-title">
-  <h2 id="replay-title">آزمون با جست‌وجوهای بیشتر</h2>
+  <h2 id="replay-title">آزمون با هزاران جست‌وجو</h2>
   <p>
-    عنوان صفحه‌ها را همان‌طور که مردم می‌نویسند بازنویسی کرده‌ایم: با صفحه‌کلید عربی،
-    بی‌نیم‌فاصله، جمع و مفرد، با ضمیر، با غلط تایپی، با صفحه‌کلیدی که روی انگلیسی مانده و…
-    هر جست‌وجو یک صفحهٔ درست دارد؛ عدد جدول سهم جست‌وجوهایی است که آن صفحه را در ۱۰
-    نتیجهٔ اول آورده‌اند.
+    عنوان همین صفحه‌ها را به شکل‌هایی بازنویسی کرده‌ایم که مردم واقعاً تایپ می‌کنند: با ی و ک
+    عربی، بی‌نیم‌فاصله، جمع به‌جای مفرد، با غلط تایپی، یا با صفحه‌کلیدی که روی انگلیسی مانده است.
+    هر جست‌وجو یک صفحهٔ درست دارد. عدد هر ستون نشان می‌دهد در چند درصد جست‌وجوها آن صفحه جزو
+    ۱۰ نتیجهٔ اول بوده است.
   </p>
   <p><button type="button" id="run-replay">اجرای آزمون</button> <span id="replay-status" aria-live="polite"></span></p>
   <table id="replay-table" hidden>
-    <thead><tr><th scope="col">چطور نوشته شده</th><th scope="col">تعداد</th><th scope="col">بدون تغییر</th><th scope="col">با fa-search-kit</th><th scope="col">نمونه</th></tr></thead>
+    <thead><tr><th scope="col">نوع جست‌وجو</th><th scope="col">تعداد</th><th scope="col">بدون تغییر</th><th scope="col">با fa-search-kit</th><th scope="col">نمونه</th></tr></thead>
     <tbody></tbody>
   </table>
 </section>
 
 <footer>
-  متن مقاله‌ها از ویکی‌پدیای فارسی (CC BY-SA 3.0) و عنوان کالاها از دیجی‌کالا؛
-  <a href="./licence/">دربارهٔ داده‌ها و مجوز</a>. کد fa-search-kit با مجوز MIT است.
+  متن مقاله‌ها از ویکی‌پدیای فارسی (CC BY-SA 3.0) و عنوان کالاها از دیجی‌کالا است؛
+  <a href="./licence/">دربارهٔ داده‌ها و مجوز</a>. کد fa-search-kit با مجوز MIT منتشر شده است.
 </footer>
 </body>
 </html>

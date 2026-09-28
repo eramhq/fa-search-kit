@@ -36,16 +36,20 @@ function onNotice(n: PagefindNotice | undefined) {
   // <bdi>: a query typed in Latin letters must not reorder the Persian sentence around it.
   const bdi = (text: string) => { const b = document.createElement("bdi"); b.textContent = text; return b; };
   const shown = document.createElement("span");
-  shown.append("نتیجه برای «", bdi(n.fixedTo), "» نشان داده شد");
+  shown.append("نتیجه‌ها برای «", bdi(n.fixedTo), "»");
   const asTyped = document.createElement("button");
   asTyped.type = "button";
   asTyped.className = "as-typed";
-  asTyped.append("جست‌وجوی «", bdi(n.fixedFrom), "» به همان شکل");
+  asTyped.append("جست‌وجوی «", bdi(n.fixedFrom), "» به همان صورت");
   asTyped.addEventListener("click", () => n.asTyped());
+  noticeBox.append(shown, " · ", asTyped);
+  // What the fix downloaded: word-list pieces, only for spelling fixes (none for keyboard fixes or when cached).
   const kb = rescue.words.bytes - bytesBefore;
-  const cost = document.createElement("small");
-  cost.textContent = kb ? `${fmtKB(kb)} کیلوبایت فهرست واژه دریافت شد` : "بدون دریافت فهرست واژه";
-  noticeBox.append(shown, " · ", asTyped, cost);
+  if (kb) {
+    const cost = document.createElement("small");
+    cost.textContent = `برای این اصلاح ${fmtKB(kb)} کیلوبایت از فهرست واژه‌های سایت دریافت شد.`;
+    noticeBox.append(cost);
+  }
 }
 const rescue = rescuePagefindUI({ fa, analyzer, bundlePath: bundle("pagefind-fa"), onNotice });
 const faUI = new PagefindUI({
@@ -81,27 +85,27 @@ if (initial) { input.value = initial; search(initial); }
 
 // Replay: the benchmark's variant queries whose targets are in the demo.
 const TYPES: Record<string, string> = {
-  canonical: "همان کلمه‌های عنوان",
-  "arabic-yk": "با ي و ك عربی",
-  "std-typing": "صفحه با ي و ك عربی نوشته شده",
+  canonical: "همان واژه‌های عنوان",
+  "arabic-yk": "ی و ک عربی",
+  "std-typing": "صفحه با ی و ک عربی نوشته شده",
   "zwnj-space": "فاصله به‌جای نیم‌فاصله",
   "zwnj-join": "بدون نیم‌فاصله",
   "zwnj-add": "نیم‌فاصله‌ای که صفحه ندارد",
   "alef-madda": "آ بدون کلاه",
-  hamza: "همزه به شکل دیگر",
-  "heh-yeh": "ـهٔ به شکل دیگر",
+  hamza: "همزه به شکلی دیگر",
+  "heh-yeh": "ـهٔ به شکلی دیگر",
   digits: "عدد فارسی یا انگلیسی",
   "plural-add": "جمع به‌جای مفرد",
   "plural-drop": "مفرد به‌جای جمع",
   "clitic-add": "با ضمیر چسبیده (کتابم)",
   combo: "دو تفاوت با هم",
-  homophone: "حرف هم‌صدا (ت/ط، س/ص…)",
+  homophone: "حرف هم‌صدا (ت و ط، س و ص…)",
   "typo-adjacent": "کلید کناری",
   "typo-delete": "یک حرف جاافتاده",
   "typo-transpose": "دو حرف جابه‌جا",
-  "layout-isiri9147": "صفحه‌کلید انگلیسی (فارسی استاندارد)",
-  "layout-win-legacy": "صفحه‌کلید انگلیسی (فارسی قدیمی ویندوز)",
-  "layout-mac-legacy": "صفحه‌کلید انگلیسی (فارسی قدیمی مک)",
+  "layout-isiri9147": "صفحه‌کلید روی انگلیسی (چینش استاندارد)",
+  "layout-win-legacy": "صفحه‌کلید روی انگلیسی (چینش قدیمی ویندوز)",
+  "layout-mac-legacy": "صفحه‌کلید روی انگلیسی (چینش قدیمی مک)",
   "layout-latin-on-fa": "نام لاتین با صفحه‌کلید فارسی",
 };
 const PER_TYPE = 40;
@@ -125,9 +129,23 @@ const bar = (share: number) => `<span class="bar"><span style="inline-size:${Mat
 
 document.querySelector("#run-replay")!.addEventListener("click", async (e) => {
   const button = e.currentTarget as HTMLButtonElement;
-  button.disabled = true;
   const status = document.querySelector("#replay-status")!;
-  const all = (await (await fetch("./replay.json")).json()) as { type: string; text: string; url: string }[];
+  button.disabled = true;
+  status.textContent = "در حال آماده‌سازی…";
+  try {
+    await replay(status);
+    status.textContent = "آزمون تمام شد.";
+  } catch (err) {
+    // Most often a page opened before the site was rebuilt (the index files were renamed).
+    console.error(err);
+    status.textContent = `آزمون اجرا نشد (${err instanceof Error ? err.message : err}). صفحه را دوباره بارگذاری کنید و دوباره امتحان کنید.`;
+  } finally {
+    button.disabled = false;
+  }
+});
+
+async function replay(status: Element) {
+  const all = (await (await fetch("./replay.json", { cache: "no-cache" })).json()) as { type: string; text: string; url: string }[];
   const [stock, faIndex] = await Promise.all([load("./pagefind-stock/pagefind.js"), load("./pagefind-fa/pagefind.js")]);
   const cacheS = new Map<string, string>(), cacheF = new Map<string, string>();
   // The fa side searches as the box does: with query rescue on the JS API.
@@ -167,6 +185,4 @@ document.querySelector("#run-replay")!.addEventListener("click", async (e) => {
       tr.lastElementChild!.append(b);
     }
   }
-  status.textContent = "تمام شد.";
-  button.disabled = false;
-});
+}

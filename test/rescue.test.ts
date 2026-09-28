@@ -122,9 +122,11 @@ describe("word list", () => {
     expect(Object.keys(JSON.parse(new TextDecoder().decode(files.get("index.json")!)))).toEqual(["v", "hash", "keys"]);
     expect([...files.keys()].every((f) => /^(index\.json|\d+\.\d+\.[\da-f]{10}\.bin)$/.test(f))).toBe(true);
     const asked: string[] = [];
-    const fetched = fetchWords("https://site.example/fa-words/", async (url) => {
+    const fetched = fetchWords("https://site.example/fa-words/", async (url, init) => {
       const name = String(url).split("/").pop()!;
       asked.push(name);
+      // The manifest is always revalidated (its name survives a rebuild); pieces carry a hash.
+      expect(init?.cache).toBe(name === "index.json" ? "no-cache" : undefined);
       return files.has(name) ? new Response(files.get(name) as Uint8Array<ArrayBuffer>) : new Response(null, { status: 404 });
     });
     expect(fetched.bytes).toBe(0);

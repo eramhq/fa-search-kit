@@ -202,7 +202,7 @@ points), sound-alike index key, distance 2, min count 2, 3-letter edits, cheap e
 Orama/Lunr native tolerance. Deviations: budgets rescue 2.6 KB (plan 2.5) and wiring 3.2 KB;
 Pagefind "known" is a word of the top result, not a result count (Pagefind matches unknown
 words by prefix). Demo: rescue in the fa box with notice, "as typed" link and KB downloaded;
-replay 31% → 93%; browser-checked (no-op `triggerSearch`, rerun with a filter, one pagefind.js
+replay 28% → 93%; browser-checked (no-op `triggerSearch`, rerun with a filter, one pagefind.js
 instance). Open: first-letter typos across sound-alike classes; a way to tell unknown real
 words from typos without a big dictionary.
 - **Keyboard layout:**

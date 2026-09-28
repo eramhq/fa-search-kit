@@ -46,6 +46,29 @@ const SOURCES: Record<"wiki" | "products", { label: string; link(d: Doc): string
   },
 };
 
+/**
+ * The demo stays on neutral ground: a page (title or text) or a replay query with a word
+ * about religion, politics, war, conflict regions, ethnic groups, crime, sex or drugs is
+ * left out. Matched per word (Arabic ي/ك folded, diacritics dropped, each half-space part
+ * too): `WORDS` whole, `STEMS` as the start of a word. Words that are mostly something else
+ * stay out of the list («کرد» "did", «سنی» "of age", «ترک» "leaving", the language names).
+ */
+const WORDS = new Set(("دین دینی خدا خداوند امام امامان حضرت پیامبر مذهب مذهبی شاه سلطان کافر کفر حجاب جهاد شهید شهادت " +
+  "جنگ جنگی ارتش سپاه نظامی کودتا ترور اعدام زندان زندانی شکنجه قتل جنایت کشتار حزب رژیم مجلس انتخابات تحریم بمب موشک اسلحه سلاح " +
+  "عرب بلوچ یهودی مسیحی ارمنی آشوری تجاوز جنسی مخدر شراب").split(" "));
+const STEMS = ("اسلام مسلمان شیع بهائی بهایی یهود مسیح زرتشت قرآن کلیسا کنیسه مسجد امامزاده آیت روحانیون آخوند نماز " +
+  "افغان طالبان داعش القاعده اسرائیل صهیون فلسطین غزه لبنان سوریه عراق یمن عربستان کردستان " +
+  "انقلاب سیاس دیکتات تروریس نسل‌کش نازی هیتلر فاشیس کمونیس مارکس لنین استالین صدام خمینی خامنه پهلوی قاجار سلطنت " +
+  "همجنس سکس فحشا تریاک هروئین").split(" ");
+const fold = (w: string) => w.replace(/[يى]/g, "ی").replace(/ك/g, "ک").replace(/[\u064b-\u065f\u0670\u0640]/g, "");
+const sensitive = (text: string) =>
+  text.split(/[^\p{L}\p{M}\u200c]+/u).some((token) => {
+    const t = fold(token);
+    // With and without the Arabic article: «الاسلامی».
+    return [t.replaceAll("\u200c", ""), ...t.split("\u200c")].flatMap((w) => [w, w.replace(/^ال/, "")])
+      .some((w) => WORDS.has(w) || STEMS.some((s) => w.startsWith(s.replaceAll("\u200c", ""))));
+  });
+
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
 const shell = (title: string, body: string, depth: number) => `<!doctype html>
 <html lang="fa" dir="rtl">
@@ -76,8 +99,8 @@ mkdirSync(DIST, { recursive: true });
 const pages: { url: string; content: string }[] = [];
 const replay: { type: string; text: string; url: string; corpus: string }[] = [];
 for (const corpus of ["wiki", "products"] as const) {
-  const docs = await loadCorpus(corpus);
-  const queries = loadQueries(corpus);
+  const docs = (await loadCorpus(corpus)).filter((d) => !sensitive(`${d.title} ${d.body}`));
+  const queries = loadQueries(corpus).filter((q) => !sensitive(q.text));
   const chosen = pick(corpus, docs, queries, PER);
   const src = SOURCES[corpus];
   const urls = new Map<string, string>();
