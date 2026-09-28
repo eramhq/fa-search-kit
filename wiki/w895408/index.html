@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>جستجو سه‌تایی</title>
+<link rel="stylesheet" href="../../style.css">
+</head>
+<body>
+<header class="site"><a href="../../">بازگشت به جست‌وجو</a> · ویکی‌پدیا</header>
+<main>
+<article data-pagefind-body data-pagefind-filter="منبع:ویکی‌پدیا">
+<h1>جستجو سه‌تایی</h1>
+<p>جستجو سه‌تایی در علوم کامپیوتر رویه ی جستجو ترنری مهارتی برای پیدا کردن مقدار بیشینه یا کمینه در توابع أکید است. در این رویه مشخص می‌کنیم که مقدار بیشینه یا کمینه تابع نمی‌تواند در یک سوم ابتدا یا انتهای دامنه ی تابع وجود داشته باشد. سپس همین شیوه را بر روی دو سوم باقی‌مانده به کار می‌بریم. جستجو سه‌تایی نمومه‌ای از روش الگوریتم تقسیم و حل است(الگوریتم جستجو را ببینید.)Ternary search تابع فرض کنید ما به دنبال بیشینۀ هستیم و می دانیم این مقدار بین و قرار دارد. برای این که الگوریتم قابل اعمال باشند، یک مقدار باید وجود داشته باشد به طوری که: به ازای همۀ مقادیر و ، که داریم به ازای همۀ مقادیر و ، که داریم الگوریتم تابع اکید را روی بازۀ در نظر بگیرید. دو نقطه ی و را در این بازه انتخاب می‌کنیم. بنابراین در این صورت سه حالت وجود دارد : اگر، مقدار بیشینه نمی‌تواند دربازۀ سمت چپ واقع شود-- . این بدان معنی است که مقدار بیشینه در فاصله قرار دارد. اگر، مقدار بیشینه نمی‌تواند دربازۀ سمت راست واقع شود-- . این بدان معنی است که مقدار بیشینه در فاصله قرار دارد. اگر، این جستجو باید در بازۀ انجام شود. این حالت را می‌تونیم به هر یک از حالت‌های قبل برای ساده شدن رویه نسبت دهیم. این فرایند تا زمانی ادامه پیدا می‌کند که بازۀ حاصل از مقدار ثابت از پیش تعیین شده کوچکتر شود. انتخاب نقاط و : m1 = l + (r-l)/3 m2 = r - (r-l)/3 زمان اجرا T(n) = T(2/3 * n) + c (Θ(log n رویۀ بازگشتی def ternarySearch(f, left, right, absolutePrecision): #left and right are the current bounds; the maximum is between them if (right - left) &lt;absolutePrecision: return (left + right)/2 leftThird = (2*left + right)/3 rightThird = (left + 2*right)/3 if f(leftThird)&gt; f(rightThird): return ternarySearch(f, leftThird, right, absolutePrecision) else: return ternarySearch(f, left, rightThird, absolutePrecision) Ternary search درخت جستجوی سه‌تایی درخت جستجوی سه‌تایی یکی از جالب‌ترین داده‌ساختارهادر زمینه دانش خوداست، زیرا این درخت ذخیره‌سازی بهینه را با سریع پیدا کردن ترکیب می‌کندو توانایی جستجوی پیشوندرا نیز دارد. قسمتی از نظریه درخت جستجو سه تایی کمی پیچیده‌تر از درخت جستجو دوتایی است. علاوه بر درخت جستجوی دودویی، اشاره گر سومی در هر گره وجود دارد. زمانی که بر روی درخت حرکت می‌کنیم، این اشاره‌گرهنگامی که مقداری که مقایسه می‌شود؛ با مقدار گره برابر باشد، استفاده می‌گردد.در نتیجه این درخت سه اشاره‌گر چپ، راست، و برابر دارد. که در شکل زیر مشاهده می‌کنید. شکل زیر درخت جستجو سه تایی رشته‌های &quot;as&quot;, &quot;at&quot;, &quot;cup&quot;, &quot;cute&quot;, &quot;he&quot;, &quot;i&quot; and &quot;us&quot; را نشان می‌دهد: c \ | / a u h | / / / t t e u \ | \| | s p e i s پیاده‌سازی پیاده‌سازی تابع search : def search(string) return false unless (string &amp;&amp; !string.empty? &amp;&amp; self.value) head, tail = string.partition if head &lt;self.value return @left.search(string) if @left elsif head == self.value return true if !tail &amp;&amp; self.ending? return @equal.search(tail) if @equal elsif head&gt; self.value return @right.search(string) if @right end end پیاد</p>
+</article>
+</main>
+<footer>متن از <a href="https://fa.wikipedia.org/?curid=895408">ویکی‌پدیای فارسی</a>، با مجوز <a href="https://creativecommons.org/licenses/by-sa/3.0/deed.fa">CC BY-SA 3.0</a> (نسخهٔ ۲۰۲۳-۱۱-۰۱، ۳٬۰۰۰ نویسهٔ نخست). <a href="../../licence/">دربارهٔ داده‌ها و مجوز</a></footer>
+</body>
+</html>

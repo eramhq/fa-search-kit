@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>رابط فلوئنت</title>
+<link rel="stylesheet" href="../../style.css">
+</head>
+<body>
+<header class="site"><a href="../../">بازگشت به جست‌وجو</a> · ویکی‌پدیا</header>
+<main>
+<article data-pagefind-body data-pagefind-filter="منبع:ویکی‌پدیا">
+<h1>رابط فلوئنت</h1>
+<p>در مهندسی نرم‌افزار یک رابط فصیح (که توسط اریک ایوانز و مارتین فاولر) راهی است برای پیاده‌سازی رابط برنامه‌نویسی که کدهایی با خوانایی بهتر را پشتیبانی کند. نمونه‌ها دلفی unit FluentInterface; interface type IConfiguration = interface procedure SetColor(Color: string); procedure SetHeight(height: integer); procedure SetLength(length: integer); procedure SetDepth(depth: integer); end; IConfigurationFluent = interface function SetColor(Color: string): IConfigurationFluent; function SetHeight(height: integer): IConfigurationFluent; function SetLength(length: integer): IConfigurationFluent; function SetDepth(depth: integer): IConfigurationFluent; end; TConfiguration = class(TInterfacedObject, IConfiguration) private FColor: string; FHeight: integer; FLength: integer; FDepth: integer; protected procedure SetColor(Color: string); procedure SetHeight(height: integer); procedure SetLength(length: integer); procedure SetDepth(depth: integer); end; TConfigurationFluent = class(TInterfacedObject, IConfigurationFluent) private FColor: string; FHeight: integer; FLength: integer; FDepth: integer; protected function SetColor(Color: string): IConfigurationFluent; function SetHeight(height: integer): IConfigurationFluent; function SetLength(length: integer): IConfigurationFluent; function SetDepth(depth: integer): IConfigurationFluent; public class function New: IConfigurationFluent; end; implementation procedure TConfiguration.SetColor(Color: string); begin FColor := Color; end; procedure TConfiguration.SetDepth(depth: integer); begin FDepth := depth; end; procedure TConfiguration.SetHeight(height: integer); begin FHeight := height; end; procedure TConfiguration.SetLength(length: integer); begin FLength := length; end; class function TConfigurationFluent.New: IConfigurationFluent; begin Result := Create; end; function TConfigurationFluent.SetColor(Color: string): IConfigurationFluent; begin FColor := Color; Result := Self; end; function TConfigurationFluent.SetDepth(depth: integer): IConfigurationFluent; begin FDepth := depth; Result := Self; end; function TConfigurationFluent.SetHeight(height: integer): IConfigurationFluent; begin FHeight := height; Result := Self; end; function TConfigurationFluent.SetLength(length: integer): IConfigurationFluent; begin FLength := length; Result := Self; end; end. Basic Usage: var C, D: IConfiguration; E: IConfigurationFluent; begin C := TConfiguration.Create; C.SetColor('blue'); C.SetHeight(1); C.SetLength(2); C.SetDepth(3); { same &quot;non-fluent interface&quot; accessed using the &quot;with&quot; statement } D := TConfiguration.Create; with D do begin SetColor('blue'); SetHeight(1); SetLength(2); SetDepth(3) end; E := TConfigurationFluent.New .SetColor('Blue') .SetHeight(1) .SetLength(2) .SetDepth(3); e</p>
+</article>
+</main>
+<footer>متن از <a href="https://fa.wikipedia.org/?curid=712767">ویکی‌پدیای فارسی</a>، با مجوز <a href="https://creativecommons.org/licenses/by-sa/3.0/deed.fa">CC BY-SA 3.0</a> (نسخهٔ ۲۰۲۳-۱۱-۰۱، ۳٬۰۰۰ نویسهٔ نخست). <a href="../../licence/">دربارهٔ داده‌ها و مجوز</a></footer>
+</body>
+</html>
