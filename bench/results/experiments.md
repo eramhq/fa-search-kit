@@ -791,3 +791,36 @@ in-browser engines (a one-word guard query finds nothing, so its fix still appli
 on Pagefind; they become false suggestions instead. Notice rate on rows spelled correctly
 lower; canonical unchanged. Reported on dev and on test (the test split was read once for
 Phase 3; this is a product decision taken afterwards, not tuning, and both numbers are shown).
+
+### Phase 3b results
+
+Runs: `fa-rescue` (suggest) over every query and the extra set; `r11-replace` (the first
+fa-rescue runs). Tables: `node bench/rescue-report.ts --split test --configs
+fa-full,r11-replace,fa-rescue` → rescue-test.md (and rescue-dev.md). Test split, typo rows
+(mean of the four), wiki / news / products:
+
+| | Pagefind as shown | Pagefind one click | MiniSearch as shown | MiniSearch one click | FlexSearch |
+|---|---|---|---|---|---|
+| R11 (every fix replaces) | 76 / 81 / 83 | – | 80 / 99 / 89 | – | 73 / 78 / 78 |
+| fa-rescue (suggest) | 28 / 71 / 74 | 76 / 81 / 83 | 78 / 98 / 63 | 80 / 100 / 89 | 73 / 78 / 78 |
+
+(Orama and Lunr move with MiniSearch.) As expected: keyboard rows identical; FlexSearch
+unchanged (a typo there means nothing found, so the fix still applies); "one click" equals
+R11 everywhere. Pagefind drops furthest as shown: it matches a typo'd word through a shorter
+prefix, so something is found and the fix becomes a suggestion (wiki homophone 89 → 27 as
+shown, 89 with one click). MiniSearch, Orama and Lunr keep most typo rows as shown on wiki and
+news, where a typo'd query usually finds nothing, and drop on products (89 → 63), where the
+other words of a product title find something.
+
+Rows spelled correctly are searched as a fix 0–0.7% of the time (R11: 0.3–1.7%) and offered a
+suggestion 0–1.6%. **False fixes** (the guard set): Pagefind 21.7 / 17.7 / 14.6% → **1.2 /
+2.2 / 1.3%** (they became suggestions: 20.5 / 15.4 / 13.2%). In-browser engines unchanged
+(28.1 / 21.7 / 16.9%): a one-word guard query for a real word the site does not have finds
+nothing there, so under the rule "replace only when nothing is found" its fix still applies,
+with the notice. A stricter setting (never replace a spelling fix, only suggest) would bring
+them to 0 as well; not built, the owner's call.
+
+Gate `fa-full → fa-rescue` (test): 335 cells, **93 up, 0 down, 0 blocking**. Against R11
+(dev) 45 cells block, all typo rows as shown, by design: those queries now get the suggestion
+instead of the replaced results. **Decision: suggest is the default** (owner decision; the
+measurements hold no surprise against it).

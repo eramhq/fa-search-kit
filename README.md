@@ -237,30 +237,39 @@ shows the suggestion, or reruns the UI with the fix when nothing was found as ty
 ### What it gets right, and what it gets wrong
 
 Recall@10 in %, test split, fa-full → with rescue (every query is a page's title words,
-rewritten the way people mistype):
+rewritten the way people mistype). In brackets: found after one click on the suggestion,
+where the results shown are still the ones as typed:
 
 | variant | Pagefind | Orama | MiniSearch | FlexSearch | Lunr |
 |---|---|---|---|---|---|
-| sound-alike letter (wiki) | 11 → 89 | 28 → 94 | 29 → 94 | 1 → 92 | 29 → 94 |
-| neighbouring key (wiki) | 15 → 84 | 25 → 90 | 24 → 90 | 1 → 86 | 24 → 89 |
-| two letters swapped (products) | 6 → 82 | 58 → 88 | 60 → 88 | 0 → 82 | 59 → 89 |
-| a letter left out (wiki) | 30 → 55 | 26 → 55 | 24 → 54 | 4 → 39 | 24 → 53 |
+| sound-alike letter (wiki) | 11 → 27 (89) | 28 → 91 (94) | 29 → 91 (94) | 1 → 92 | 29 → 91 (94) |
+| neighbouring key (wiki) | 15 → 28 (84) | 25 → 88 (90) | 24 → 88 (90) | 1 → 86 | 24 → 87 (89) |
+| two letters swapped (products) | 6 → 73 (82) | 58 → 60 (88) | 60 → 61 (89) | 0 → 82 | 59 → 61 (89) |
+| a letter left out (wiki) | 30 → 34 (55) | 26 → 54 (55) | 24 → 53 (54) | 4 → 39 | 24 → 53 |
 | English keyboard, standard layout (news) | 0 → 95 | 0 → 99 | 0 → 100 | 0 → 79 | 0 → 98 |
 | English keyboard, legacy Mac (wiki) | 0 → 70 | 1 → 72 | 1 → 73 | 0 → 66 | 1 → 72 |
 | Latin name typed on Persian (products) | 19 → 93 | 49 → 98 | 49 → 98 | 0 → 94 | 49 → 98 |
 
-No row gets worse (335 cells, none down), and correctly spelled queries are searched as
-typed 98–99.7% of the time.
+No row gets worse (335 cells, none down). Correctly spelled queries keep their own results
+99.3–100% of the time. Pagefind shows the suggestion more often than the others: it matches a
+misspelled word through a shorter prefix, so the typed words usually find something.
 
 **MiniSearch**: also set its own `fuzzy: 0.2` (`searchOptions: { ...fa.searchOptions, fuzzy: 0.2 }`),
 with or without rescue; it passed the benchmark and adds to it. Orama's `tolerance` and Lunr's
 edit distance cost 8–21 points of ranking on Persian: leave them off.
 
-The cost: a real word that is **not on the site** but is one edit away from a site word
-is "fixed" too (24–59% of such words in the benchmark's guard set, depending on the site; names and Latin words far less; tokens with digits almost never); the notice and the "as typed" link are there for that.
-Typos that change the first letter into another letter group are not fixed (the word
-pieces are split by first letter). Full numbers and every decision:
-[bench/results/phase3.md](bench/results/phase3.md), [bench/results/experiments.md](bench/results/experiments.md) (Phase 3).
+What it still gets wrong:
+- **A real word that is not on the site** but is one edit from a site word. While it finds
+  something it only gets a suggestion. When the search as typed finds nothing, the fix replaces
+  it, with the notice and the "as typed" link: in the benchmark's guard set that happens for 1–2%
+  of such searches on Pagefind and 17–28% on the in-browser engines (a one-word search for a
+  word the site lacks finds nothing there).
+- **Latin words and tokens with digits:** rewritten 0–5% of the time.
+- **First-letter typos:** a typo that changes the first letter into another letter group is
+  not fixed (the word pieces are split by first letter).
+
+Full numbers and every decision:
+[bench/results/phase3.md](bench/results/phase3.md), [bench/results/experiments.md](bench/results/experiments.md) (Phase 3, 3b).
 
 ### Search logs
 

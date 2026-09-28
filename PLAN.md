@@ -202,9 +202,17 @@ points), sound-alike index key, distance 2, min count 2, 3-letter edits, cheap e
 Orama/Lunr native tolerance. Deviations: budgets rescue 2.6 KB (plan 2.5) and wiring 3.2 KB;
 Pagefind "known" is a word of the top result, not a result count (Pagefind matches unknown
 words by prefix). Demo: rescue in the fa box with notice, "as typed" link and KB downloaded;
-replay 28% → 93%; browser-checked (no-op `triggerSearch`, rerun with a filter, one pagefind.js
+replay 28% → 93% (85% as shown once misspellings became suggestions, Phase 3b); browser-checked (no-op `triggerSearch`, rerun with a filter, one pagefind.js
 instance). Open: first-letter typos across sound-alike classes; a way to tell unknown real
 words from typos without a big dictionary.
+
+**Phase 3b (2026-09-28, owner decision): suggest, don't replace.** A keyboard fix still
+replaces the search; a misspelling is a suggestion ("did you mean …?") unless the words as
+typed find nothing. Test: fa-full → fa-rescue 93 up, 0 down, 0 blocking; "one click" recall
+equals the replace behaviour (arm R11) everywhere; false fixes on Pagefind 15–22% → 1–2%
+(now suggestions); in-browser engines unchanged at 17–28% (one-word queries for words the site
+lacks find nothing, so the fix applies); rows spelled correctly rewritten 0–0.7%. Live demo:
+https://eramhq.github.io/fa-search-kit/ (gh-pages branch).
 - **Keyboard layout:**
   - Mapping tables for ISIRI 9147, legacy Windows KBDFA and Mac, in both directions.
   - Detect the mistake with a character n-gram "does this look like Persian or English?" score (the Rekey/Punto approach).

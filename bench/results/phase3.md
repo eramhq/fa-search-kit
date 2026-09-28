@@ -1,12 +1,10 @@
 # Phase 3: query rescue — results
 
-> **Update (2026-09-28, Phase 3b, owner decision):** a misspelling is now offered as a
-> suggestion ("did you mean …?") and replaces the search only when the words as typed find
-> nothing; keyboard fixes still replace it. The numbers below are for the first behaviour
-> (every fix replaced the search), now arm R11. The new default's numbers are being measured
-> (bench/results/experiments.md, "Phase 3b"); first in-browser results: typo rows as shown are
-> back near fa-full on MiniSearch, Orama and Lunr where other words find something, "one click"
-> recall matches R11, rows spelled correctly are rewritten 0–0.2% (was up to 1.7%).
+> **Update (2026-09-28, Phase 3b, owner decision): suggest, don't replace.** A keyboard fix
+> still replaces the search; a misspelling is now offered as a suggestion ("did you mean …?")
+> with the results as typed, and replaces the search only when the words as typed find
+> nothing. The tables below this box are for the first behaviour (every fix replaced the
+> search, now arm R11); the new default's results are in "Phase 3b" at the end.
 
 **Test split, computed once** at the end of the phase (2026-09-27), after all tuning on
 dev. Tables: [phase3-test.md](phase3-test.md) (every cell, n and 95% intervals in
@@ -161,3 +159,33 @@ FlexSearch have no edit-distance tolerance.
   CPU-minutes); R9 on wiki and news is covered by this test-split gate.
 - The analytics key prefix is `1:` (not tied to the package version string); a site passes
   its own prefix when it changes its analyzer.
+
+## Phase 3b: suggest, don't replace (test split)
+
+Gate `fa-full → fa-rescue`: 335 cells, **93 up, 0 down, 0 blocking**. Recall@10 in %,
+fa-full → as shown (in brackets: found with one click on the suggestion, when it differs):
+
+| row | Pagefind | Orama | MiniSearch | FlexSearch | Lunr |
+|---|---|---|---|---|---|
+| wiki homophone | 11 → 27 (89) | 28 → 91 (94) | 29 → 91 (94) | 1 → 92 | 29 → 91 (94) |
+| wiki typo-adjacent | 15 → 28 (84) | 25 → 88 (90) | 24 → 88 (90) | 1 → 86 | 24 → 87 (89) |
+| wiki typo-delete | 30 → 34 (55) | 26 → 54 (55) | 24 → 53 (54) | 4 → 39 | 24 → 53 |
+| products typo-transpose | 6 → 73 (82) | 58 → 60 (88) | 60 → 61 (89) | 0 → 82 | 59 → 61 (89) |
+| news keyboard, standard | 0 → 95 | 0 → 99 | 0 → 100 | 0 → 79 | 0 → 98 |
+| wiki keyboard, legacy Mac | 0 → 70 | 1 → 72 | 1 → 73 | 0 → 66 | 1 → 72 |
+| products Latin name on Persian | 19 → 93 | 49 → 98 | 49 → 98 | 0 → 94 | 49 → 98 |
+
+- **Rows spelled correctly:** searched as a fix 0–0.7% of the time (was up to 1.7%), offered
+  a suggestion 0–1.6%.
+- **False fixes** (real words not on the site, names, Latin, digits, inflected forms; guard
+  set): Pagefind **1.2 / 2.2 / 1.3%** (wiki / news / products; was 21.7 / 17.7 / 14.6%), the
+  rest now suggestions. In-browser engines unchanged at 28.1 / 21.7 / 16.9%: a one-word query
+  for a real word the site does not have finds nothing there, and then the fix applies (with the
+  notice and the "as typed" link). Only suggesting, never replacing a spelling fix, would bring
+  those to 0; it is a one-line policy change if wanted.
+- **Why Pagefind differs:** it matches a typo'd word through a shorter prefix, so the typed
+  query usually finds something and the fix becomes a suggestion. Its results for such queries
+  also depend on earlier searches in the same visit (a Pagefind bug we reproduced on a plain
+  English index and reported: https://github.com/Pagefind/pagefind/issues/1351).
+- Word bytes per weak Pagefind search unchanged (3.3 / 9.2 / 17.9 KB median, products / news /
+  wiki); keyboard rows identical to R11.
