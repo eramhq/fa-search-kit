@@ -247,9 +247,15 @@ not public, so all of these carry their numbers inline.
 - **lunr-languages:** add `lunr.fa` (a stemmer, stop words and tests, per their CONTRIBUTING).
 - **Snowball:** send test cases and fixes found by the benchmark to `persian.sbl` and snowball-data. The maintainers require written reasons for every rule, and they rejected stripping negation prefixes.
 
-### Phase 4b (experimental, gated): learned lemmatizer (stemmer layer 3)
+### Phase 4b (experimental, gated): learned lemmatizer (stemmer layer 3) — **done (2026-09-28): a word list, not a model**
 - Train the tiny character-level model on teacher labels. Compare three setups on the benchmark: Snowball alone, Snowball + lexicon, and Snowball + lexicon + model.
 - Ship it as an optional `/lemma` entry only if it wins on recall **and** precision within about 50 KB.
+- **Outcome** ([bench/results/phase4b.md](bench/results/phase4b.md)):
+  - The pre-registered rule applied: at equal size, a plain list of words matched the suffix tree and beat the linear model, with half the wrong merges. So there is no `/lemma` entry.
+  - The list ships inside `fa-search-kit/lexicon`: 579 words, lexicon 7.83 → 10.83 KB.
+  - Labels: two AI families agreeing on our own word list, plus Hazm verbs.
+  - The ezafe ی and ات labels were dropped; the owner chose the smaller list.
+  - Test split: no benchmark cell down; plural searches up on Pagefind and FlexSearch.
 
 ### Phase 5 (experimental, gated): hybrid semantic search
 - Distill a Persian-vocabulary int8 **Model2Vec** model from a Persian-capable teacher (Tooka-SBERT or multilingual-e5), with a target of ≤ 30 MB.

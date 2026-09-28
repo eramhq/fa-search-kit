@@ -824,3 +824,300 @@ Gate `fa-full → fa-rescue` (test): 335 cells, **93 up, 0 down, 0 blocking**. A
 (dev) 45 cells block, all typo rows as shown, by design: those queries now get the suggestion
 instead of the replaced results. **Decision: suggest is the default** (owner decision; the
 measurements hold no surprise against it).
+
+---
+
+# Phase 4b: an optional word-root model (`fa-search-kit/lemma`)
+
+The plan (owner-approved 2026-09-28): a small model behind the lexicon links forms the
+rules miss («نویسندگان» → «نویسنده», «حملات» → «حمله», «ابتدای» → «ابتدا», verbs the lexicon
+lacks). It predicts an edit (strip a verb prefix, cut letters, append) or defers; the
+lexicon always wins; when it defers the output is fa-full's. Trained only on clean data
+(Hazm verbs, MIT; our vocabulary counts; LLM labels of our own word list). UD and Hazm's
+lemmatizer are comparison arms only. Ships only if it finds more without wrong merges;
+if a plain list of the same size does as well, the list; if nothing helps, nothing.
+Tools: `bench/lib/lemma.ts` (targets, splits by lemma, the UD oracle),
+`bench/lemma-eval.ts` (offline, UD), `bench/lib/lemma-sets.ts` (the lemma query set),
+`scripts/lemma/` (edits, the lexicon wrapper, the models).
+
+## CP0: headroom (2026-09-28)
+
+**Target.** A verb's (ن)+past stem (PerDT only; preverb kept: «برخاستند» → «برخاست»);
+any other content word the term fa-full gives its gold lemma; function words (AUX, PRON,
+ADP…) keep fa-full's term, so the model can only lose there.
+
+**Where fa-full misses the target** (`node bench/lemma-eval.ts --baseline --split all`,
+bench/results/lemma-baseline-all.md; PerDT tokens): NOUN 18.0k of 167k (10.7%), ADJ 3.0k
+of 35k (8.6%), VERB 5.6k of 54k (10.3%). Causes: ezafe/indefinite ی joined to the word
+9.1k nouns + 1.8k adjectives + 0.4k names; verbs outside the lexicon 4.2k, and 1.4k forms
+of lexicon verbs the lexicon refuses on purpose («کنیم», «کردی»: bare forms read as nouns);
+ان/یان plurals 2.3k; comparatives 0.9k; clitics 0.9k; ات 0.7k; گان 0.4k. Seraji: nouns and
+adjectives 8.7%, the same causes. One lexicon slip found on the way: «می‌زد» → «می‌زید»
+(«زد» is not a lexicon past stem, so the present-stem path reads ز+د); the model cannot fix
+it (the lexicon wins), noted for a later lexicon pass.
+
+**The lemma query set** (`node bench/lemma-queries.ts`, written before any arm ran): every
+canonical query (supplementary targets included) gets at most one variant per class, one
+token swapped for another UD-attested, vocabulary-attested form of its one UD lemma; pairs
+that differ only by the ها plural are left to the main set. wiki 639, news 1,315, products
+1,344 queries; nouns dominate (ezafe ی, clitic, «other» stem changes, ات, ان/یان), adjectives
+~170 per corpus, verbs 7 / 101 / 6. Every lemma in the set occurs in UD's train files, so
+the UD-trained arm is optimistic on the whole set (no unseen rows to split out).
+
+**Expected (written before the benchmark runs).**
+- *Main set, lm-oracle-ud vs fa-full (dev).* Mostly a no-op: no generator adds ezafe ی,
+  ات, گان or comparatives. Small ups possible on verb-tense-ud (PerDT verbs the lexicon
+  lacks) on Pagefind and FlexSearch, and on plural/clitic rows where the page's word is an
+  ezafe or ان form. Risk: OR engines' ranking when a common lemma absorbs more forms; we
+  expect no blocking cell and moves within ±1 point.
+- *Lemma set.* fa-full on Pagefind and FlexSearch (every word must match) misses most
+  ezafe/ات/ان/گان/comparative swaps; the oracle recovers most of them: morph-ud-noun and
+  -adj +5 to +15 points there. OR engines already find most rows through the other words:
+  recall moves little, MRR rises.
+- *Conflation (UD dev files, measured first):* UI falls sharply for nouns and adjectives.
+- *Conflation (UD dev files; `node bench/conflation.ts --configs fa-full,lm-oracle-ud --base
+  fa-full --splits dev`):* UI falls sharply for nouns and adjectives. Measured before the
+  benchmark: see below.
+
+### CP0 results: the headroom is real (dev)
+
+| | fa-full | lm-oracle-ud |
+|---|---:|---:|
+| Seraji UI % / OI ×10⁶ | 56.7 / 57.5 | 44.3 / 64.3 |
+| PerDT UI % / OI ×10⁶ | 57.7 / 51.6 | 49.7 / 53.2 |
+| PerDT UI NOUN / VERB / ADJ | 42.4 / 60.3 / 59.9 | 16.4 / 55.9 / 29.0 |
+
+**Lemma set** (`compare.ts fa-full lm-oracle-ud --set lemma --split dev`): 35 cells, **20 up, 0
+down**. morph-ud-noun on Pagefind 64 / 58 / 84 → 93 / 96 / 96 (wiki / news / products),
+FlexSearch 55 / 43 / 57 → 93 / 96 / 97; OR engines 84–99 → 90–100 with MRR up (wiki
+MiniSearch 75 → 93). By subtype the gain is ezafe ی (Pagefind 43 → 99, FlexSearch 31 → 98),
+«other» stem changes (22 → 73), other endings, ان/یان (50 → 100), ات on FlexSearch (55 → 100);
+verbs 83 → 87 (few rows: the lexicon already covers most). **Main set** (dev): 335 cells, 0 up,
+0 down, nothing blocks; the moves are within 1–2 points both ways (verb-tense-ud news
+Pagefind 84 → 91, FlexSearch 82 → 91; plural-add news Pagefind 98 → 96), as expected.
+
+**Not expected: even the gold oracle raises OI** (Seraji 57.5 → 64.3, PerDT 51.6 → 53.2). The
+wrong merges it adds over fa-full (bench/results/conflation-lm-oracle-dev.md) are mostly the
+gold's own inconsistencies, not errors: the same form lemmatized two ways in different
+sentences («آمریکای» as آمریکای and as آمریکا; «دیگری» as دیگری and دیگر; infinitives and
+participles with lemmas of their own, «کردن» apart from «کرد»), so merging a form into its
+dominant lemma counts every minority reading as a wrong pair. Some are real and would be
+real for any model: «بهتر» → «به» (PerDT lemmatizes the comparative to «به», which is also the
+preposition), «سالمی» → «سال» (fa-full's own term for «سالم» is «سال»). **Consequence for
+CP3:** the gate "OI ≤ fa-full's on both treebanks" cannot be met by gold labels, so it would
+stop any model that fires at all; a UD-trained tree passes it only at τ = 0.9, where it fixes
+77 dev tokens. Recorded here before the trained arms ran; the gate question goes to the
+owner with the trained model's numbers.
+
+**Stop point:** does the oracle move a target cell and lower UI? Yes (20 cells, UI NOUN
+42 → 16). Continue.
+
+## CP1: labels
+
+**Refactor.** Vocabulary normalization, `count`, `pluralizable` and the verb pairs moved from
+`scripts/build-lexicon.ts` to `scripts/lib/mine.ts`; the builder's output is byte-identical
+to the old builder's. Found on the way: the committed `src/lexicon/data.ts` is 7 words
+behind its own builder (the builder now also keeps «میزگرد», «میتانی», «میبدی», «میردامادی»,
+«میانرود», «مینوسی», «میثاقی», because the joined-«می» rule fallback of commit 5e87260 changed
+what the aggressive analyzer strips); left as committed (a lexicon change needs its own gate).
+
+**Mined labels (M,** `node scripts/build-lemma.ts --mine`, bench/results/lemma-mined.md).
+Verbs: every Hazm pair conjugated, perfect included, 2,807 forms (a form two verbs share,
+a noun, or an unprefixed form of a noun stem dropped; «بیستم» dropped as the lexicon drops
+«بیست»). Nominals: X+σ → fa-full's term for X under count tests; look-alikes (a word that takes
+a plural or nisba ی of its own, or is spelled as a compound: «ماهی», «مهمان», «کرمان»,
+«کم‌کم») defer. **Checked against UD, only two classes reach the mined-only bar (90% of ≥ 30
+UD-checked fires): verbs 98.1% and comparatives 97.0%.** The noun classes fall below and are
+dropped from M (their candidates go to the LLM queue instead): ezafe ی after a consonant
+54% (nisba adjectives: «احتمالی», «سراسری», «دلاری» are words of their own in UD), یی after a
+vowel 20% (abstract nouns: «رهایی», «بینایی»), ezafe after a vowel 73–76% (partly UD
+conventions: broken plurals «شهدای» → شهید, prepositions «جلوی»), ات 81%, ان/یان 84% (names:
+«کرمان», «مهران», «طالبان»; adjectives «هراسان»), گان 88% («مهرگان», «تیرگان»), ها 87%. The clitic
+and ین candidates were never labels (the rules handle clitics; mined ones were mostly
+names: «ایشان», «آیدین»). A count-ratio rule, a nisba test and a compound test were each
+added after reading the misses; none lifts a noun class over the bar.
+
+**LLM labels (L,** `node bench/lemma-llm.ts --merge dev-91432d40888a,bulk-91432d40888a`,
+bench/results/lemma-labels.md, provenance bench/results/lemma-llm-manifest.json). Prompt
+bench/lemma-llm/prompt.md, developed on 300 dev-lemma words with UD answers and frozen
+(hash 91432d40888a) before bulk labelling; it was not changed after the development
+round (Claude alone 92.4% of its merges right against UD, luna 95.5%, both agreeing 95.4%,
+κ 0.85). Queue: 23,954 words of our vocabulary (mined candidates the miner could not decide
+or that failed its bar, seen ≥ 10 times; look-alikes ≥ 20; every mined comparative; unmined
+words seen ≥ 100 times that look inflected), in 40 shards; luna (gpt-6-luna, xhigh, one fresh
+Codex session per shard) and Claude (one subagent per shard), same prompt and contract.
+Result over 24,254 words: **agreement 91.0%, κ 0.82** (merge vs defer); 7,502 accepted
+merges, **95.8% right** on the 3,411 that UD can check (≥ 1000 uses 97.8%, 100–999 95.3%,
+20–99 95.1%). By class, the ezafe ی after a consonant (94.0%), after a vowel (92.3%) and ات
+(88.2%) fall under the 95% bar and are **dropped from L** (not used at all); clitics 97.5%,
+ان/یان 96.6%, ین 96.7%, comparatives 100%, look-alikes 96.6%, unmined 95.9%, گان 95.1%,
+verbs 100%. Dropping the ezafe classes removes the largest share of the headroom measured
+at CP0 (9.1k PerDT noun tokens): whatever the model gains on nouns now comes from plurals,
+clitics and comparatives.
+
+Two merge rules settled while reading the disagreements (before any model trained): the
+families agree when they give the same **term** (luna gave «می‌کشد», «کشیدند» the right past
+stem but kind "noun", «خواهند» kind "function"); such a word is a verb when either family
+says so and the lemma is a Hazm past stem. A duplicate luna pool (started before shard
+locks existed) re-ran four finished shards; it was stopped, and the finished files kept
+(checked: 600 valid rows each).
+
+**Adjudication** (bench/results/lemma-adjudication.tsv, my verdicts on 200 random
+disagreements, before the kind rule above): Claude right 128, luna right 68, neither 3
+(«دوامی» → دوا, «زایدی» → زاد, «پیشینش» → پیش), 1 not a real disagreement (the duplicate-pool
+artefact). Luna's errors are mostly **missed merges** (97, e.g. «کشتی‌های», «لباستان»,
+«واحدهایی», «پمپی»; its wrong merges, 34, include garbage targets: «پولانسکی» → ویکیپدیا,
+«صاف‌تر» → مضر). Claude's are 46 missed, 25 wrong merges (joined prepositions and verbs
+«بعمل», «بدوش», «برخواهد»; nisba adjectives «هتلی», «وجهی»). So the agreement rule mostly costs
+coverage (luna defers a lot), not precision.
+
+## CP2: models offline (dev) — **a plain list matches the models; the tree only wins on unseen words, imprecisely**
+
+`node scripts/build-lemma.ts --sweep` (bench/results/lemma-models.md). On UD dev tokens, M+L
+labels, against fa-full (fixed / broken, net):
+
+| size | tree (A) | linear (B) | list (C) |
+|---:|---|---|---|
+| 5 KB | +448 / −198, net 250 | does not fit | +364 / −108, net 256 |
+| 10 KB | +509 / −203, net 306 | +199 / −251, net −52 | +412 / −113, net 299 |
+| 25 KB | +543 / −209, net 334 | +423 / −185, net 238 | +433 / −115, net 318 |
+
+The tree reaches unseen words (pair-dev coverage 36–38%) but with 17–19% wrong edits and
+4–6% false fires; with a threshold that brings it to the list's error level it loses (10 KB,
+τ 0.6: +248 / −78, net 170, unseen coverage 6%; τ 0.8: net 69). The linear model is behind
+everywhere and does not fit 5 KB. Label sources: M alone gives almost nothing (mined nouns
+failed their bar; the verbs are mostly already lexicon verbs): tree net −12 to +1; L alone
+fires too often (no mined negatives; tree 5 KB +558 / −541); U (UD train, comparison only)
+tree 5 KB +1005 / −199 and list +875 / −28, the ceiling clean labels miss mostly because
+the ezafe ی classes were dropped; H (Hazm's lemmatizer, comparison only) breaks more than it
+fixes (tree 25 KB +334 / −544).
+
+**Decision (pre-registered rule): "more words beat a model".** C matches A at equal bytes
+and does it with half the broken tokens, so there is no `/lemma` model; the list becomes a
+lexicon experiment (15 KB budget; the lexicon is 7.8 KB). The active-learning round (meant
+to improve a model's uncertain region) is not run. Arms: `lm-list` (5 KB), `lm-list-7`
+(7 KB) through the same wrapper (a list is a lexicon lookup), `lm-tree` (10 KB, τ 0.6) kept
+for reference.
+
+## CP3: conflation (UD dev files)
+
+`node bench/conflation.ts --configs fa-full,lm-list,lm-list-7,lm-tree --base fa-full --splits
+dev` (bench/results/conflation-lm-dev.md):
+
+| | Seraji UI / OI | PerDT UI / OI | PerDT UI NOUN / VERB / ADJ |
+|---|---|---|---|
+| fa-full | 56.7 / 57.5 | 57.7 / 51.6 | 42.4 / 60.3 / 59.9 |
+| lm-list (5 KB) | 53.3 / 59.2 | 55.1 / 52.5 | 38.2 / 58.3 / 53.1 |
+| lm-list-7 | 52.8 / 59.8 | 54.5 / 53.2 | 37.1 / 57.9 / 51.9 |
+| lm-tree (τ 0.6) | 54.3 / 59.5 | 56.1 / 52.9 | 40.1 / 58.7 / 56.8 |
+
+The target (UI down ≥ 2 points on PerDT NOUN or VERB) is met by the list (−4.2 NOUN). The
+gate as written (OI ≤ fa-full's on both treebanks) fails, as it failed for the gold oracle
+(CP0): of the 16 Seraji pairs the list adds, most are the gold's two readings of one form
+(«آمریکای» and «آمریکا», «اروپای», «جهانیان» apart from «جهانی», «کردن» apart from «کرد»); one
+comes from fa-full itself («نامه‌ای» → نام, because fa-full's term for «نامه» is «نام»). Taken
+to the owner with the benchmark numbers; the benchmark runs on dev meanwhile.
+
+## CP4: benchmark (dev)
+
+`compare.ts fa-full <arm> --split dev` and `--set lemma`:
+
+| arm | main set (335 cells) | lemma set (35 cells) |
+|---|---|---|
+| lm-list (5 KB) | 0 up, 0 down, 0 blocking | 3 up, 0 down |
+| lm-list-7 | 0 up, 0 down, 0 blocking | 3 up, 0 down |
+| lm-tree (10 KB, τ 0.6) | 0 up, 0 down, 0 blocking | 2 up, 0 down |
+
+Small gains, all on the plurals the clean labels kept: morph-ud-noun news Pagefind 58 → 61,
+FlexSearch 43 → 49; by subtype ان/یان Pagefind 56 → 67, FlexSearch 37 → 56; گان dropped forms
+0 → 100 (2 rows). The oracle's gain (news noun 58 → 96) was mostly the ezafe ی and «other»
+stem changes, which the clean labels do not have. (One products/Pagefind job failed with the
+known Pagefind metadata load error and was re-run.)
+
+### Owner decision (2026-09-28): try to recover the ezafe ی before deciding
+
+No stricter acceptance rule on the existing labels lifts the ezafe classes over 95% against
+UD (tuned on UD train+dev words only): both families' share = 1: 94.2%; count ratio
+X+ی / X ≤ 0.1 and share = 1: 94.5%; X seen ≥ 200 and ratio ≤ 0.2: 94.4%. **Reading the
+disagreements instead** (UD train+dev, all 48 of the two classes): most are UD conventions,
+not label errors: UD keeps the indefinite ی in the lemma («معبدی», «حاصلی», «موافقتی», «طویلی»
+as ADJ), keeps a broken plural as its own lemma where our rule asks for the singular («مبالغی»
+→ مبالغ, «شروطی», «اقشاری»), or its lemma is the form itself with the ezafe («مجرای», «دورنمای»,
+«انقضای»). Wrong by our definition: 5 of 35 after a consonant («هیچی», «خاری», «بازدیدی»,
+«محملی», «چنانی») and 1 of 13 after a vowel («باروی»), so ≈ 99% of the UD-checked merges are
+right by the target the model is meant to learn. ات stays dropped (its misses are real:
+«معلومات», «انتظامات» are words of their own). This is an adjudication, not a rule chosen
+before the data; the arm that uses it is named for it (`M+L+ez`, arms `lm-list-ez`,
+`lm-list-ez-7`) and the owner decides whether it ships.
+
+Offline (UD dev tokens, against fa-full): lm-list +364 / −108; **lm-list-ez +523 / −131**
+(nouns +430 / −21); lm-list-ez-7 +558 / −133. Conflation (UD dev): PerDT UI NOUN 42.4 →
+38.2 (lm-list) → **35.0** (lm-list-ez) → 34.5 (-7); OI the same as lm-list (PerDT 52.4,
+Seraji 59.8, fa-full 51.6 / 57.5).
+Benchmark (dev), same gate: lm-list-ez main set 335 cells 0 up / 0 down; lemma set **8 up**,
+0 down (news nouns Pagefind 58 → 65, FlexSearch 43 → 53; ezafe rows Pagefind 55 → 60,
+FlexSearch 31 → 39); lm-list-ez-7 9 up. **Owner decision: ship the smaller list, without the
+ezafe ی** (the labels that passed the bar mechanically).
+
+## Review of the added merges (the owner's gate in place of "OI never higher")
+
+Reading the tokens the chosen list breaks against fa-full on UD dev and test found two real
+faults, both from the lexicon being keyed by the bare word (ZWNJ removed):
+
+- **Half-space collisions:** «نامهای» is both «نام‌های» (names) and «نامه‌ای» (a letter), and
+  «دستهای» is both «دست‌های» and «دسته‌ای». One list entry served both, so «نامه‌ای» became
+  «نام». Rule: skip a word when an attested half-space spelling (≥ 5% of its uses) splits
+  it elsewhere than its label, either after the lemma or before a bare ending.
+- **Stop words:** «آنها» → «آن» ("they" is not "that"). Rule: never a Hazm stop word.
+
+After the fix (UD dev): 310 fixed and 47 broken, against 364 and 108 before. The remaining
+breaks are defensible: «اروپای» → «اروپا», «بالای» → «بالا», the future «خواهم» → «خواست»
+(UD's own lemma), and «هزاران» → «هزار». Conflation (UD dev): PerDT UI NOUN 42.4 → 37.9;
+OI PerDT 51.6 → 52.0, Seraji 57.5 → 58.2; with verb families PerDT OI unchanged (30.2).
+
+These fixes were made **after** one test read of the treebanks (UD test files, before the
+fix: 325 fixed, 131 broken; nouns 257 / 8). That UD test number is therefore not a clean
+read for the fixed list. The benchmark test read below was taken once, after the fix.
+
+## CP5: test, once
+
+`compare.ts fa-full lm-list --split test` (and `--set lemma`), `compare.ts fa-rescue
+lm-list-rescue --split test`:
+
+- main set: 335 cells, **0 up, 0 down, 0 blocking**;
+- lemma set: 35 cells, **1 up** (news nouns FlexSearch 49 → 53), 0 down. By subtype on the
+  engines that need every word: ان/یان Pagefind 83 → 90, FlexSearch 63 → 77; گان FlexSearch
+  38 → 75; dropped ان/یان FlexSearch 45 → 73. OR engines move ±1 (Orama ان/یان 97 → 90 is
+  2 queries of 30, not significant);
+- rescue guard: false-fix rows unchanged (at most 1 query in 150 more, on ff-real and
+  ff-name);
+- dev, for reference: main 0 / 0; lemma 3 up.
+
+**Pass** (no blocking cell, a target cell up).
+
+## CP6: shipped in the lexicon
+
+- `scripts/build-lemma.ts --emit lm-list` writes `src/lexicon/lemmas.ts`: 579 words and 30
+  edits, 2.9 KB gzipped on its own.
+- `createLexicon` reads it behind the verb list, keep list and broken plurals, which
+  always win.
+- Left out: the entries those lists decide anyway, and 10 whole-word replacements. The
+  replacements are broken plurals such as «ابیات» → بیت: `applyEdit` keeps at least one
+  letter, so they never fired in the tested arm.
+- Checked: the shipped lexicon gives the tested arm's terms on every vocabulary word
+  under the default, `negation: "merge"` and `verbs: "stem"` settings (0 of 802,416
+  analyses differ), and two builds are byte-identical.
+- Sizes: core 4.95 KB, unchanged; lexicon 7.83 → **10.83 KB** (budget 15); every adapter
+  unchanged.
+- Benchmark bookkeeping: `fa-full` / `fa-rescue` now carry the list. Their earlier runs
+  are kept as `fa-full-p3` / `fa-rescue-p3`, and the arms of Phases 1–3 pinned to that
+  lexicon. The new `fa-full` runs are the `lm-list` runs, copied (the shipped lexicon is
+  identical to the arm). `fa-rescue` is re-run on the main set.
+
+Not done, recorded:
+
+- the active-learning round (it was for a model, and there is none);
+- the held-out-verb pair of arms (a list cannot reach verbs it never saw, by construction);
+- labels ات and ezafe ی (owner's choice);
+- the whole-word broken plurals («ابیات», «اجرام», «اذهان», «اوزان»…): a candidate for the
+  hand-written `PLURALS` list, gated on its own.

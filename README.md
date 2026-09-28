@@ -28,7 +28,7 @@ adapters take the engine you already use and never import one themselves.
 |---|---|---:|
 | `light` | normalize (Arabic ي/ك/ة, hamza forms, digits, diacritics, stretched letters, ZWNJ cleanup) + tokenize (rejoin «می روم», «کتاب ها») | in the core |
 | `standard` (default) | + Snowball's Persian stemmer (3.1.1) with the fixes it needs: joined «میروم», closed suffixes after a half-space, compound parts, both half-space spellings, آ typed as ا | core: **4.95 KB** |
-| `full` | + `fa-search-kit/lexicon`: present → past verb stems («می‌روم», «رفتند» → «رفت»), possessive clitics, broken plurals (کتب → کتاب), a keep list against over-stemming | + 7.83 KB |
+| `full` | + `fa-search-kit/lexicon`: present → past verb stems («می‌روم», «رفتند» → «رفت»), possessive clitics, broken plurals (کتب → کتاب), a keep list against over-stemming, and a list of ~580 inflected forms the rules miss («نویسندگان» → «نویسنده», «بازیگران», «سخت‌تر») | + 10.83 KB |
 
 Each adapter adds 0.1–0.5 KB to the core. `node scripts/size.ts` enforces the budgets.
 
@@ -300,7 +300,7 @@ adapter (full profile)**:
 | two differences at once (wiki) | 10 → 97 | 0 → 97 | 26 → 99 | 13 → 99 | 0 → 98 |
 
 Stock Orama and Lunr index no Persian at all (their tokenizers drop the letters).
-Full tables, the method and every decision: [bench/results/phase3.md](bench/results/phase3.md) (query rescue), [bench/results/phase2.md](bench/results/phase2.md),
+Full tables, the method and every decision: [bench/results/phase4b.md](bench/results/phase4b.md) (the lexicon's lemma list: why a word list, not a model), [bench/results/phase3.md](bench/results/phase3.md) (query rescue), [bench/results/phase2.md](bench/results/phase2.md),
 [bench/results/phase1.md](bench/results/phase1.md), [bench/README.md](bench/README.md).
 Typos and wrong keyboard layouts: see query rescue above.
 
@@ -323,7 +323,8 @@ lives on the `gh-pages` branch (`node demo/build.ts`, then push `demo/dist` ther
 ## Data and licence
 
 MIT. Shipped data: the Snowball stemmer (BSD-3-Clause), Hazm's verb stems (MIT) and
-word lists this project built; every item and its source is listed in
+word lists this project built (one of them, the lexicon's lemma list, from two AI models
+agreeing on words of our own word list); every item and its source is listed in
 [DATA-SOURCES.md](DATA-SOURCES.md). CC BY-SA and other third-party text (Wikipedia,
 UD treebanks, the news and product corpora) is used for evaluation only.
 

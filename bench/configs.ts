@@ -22,6 +22,9 @@
  *   set up as a site would: in-browser engines collect terms and words with
  *   `rescue.addText` next to indexing; Pagefind builds the word list while annotating
  *   and asks the index itself (a probe search) whether a word is known.
+ * - fa-full-p3 / fa-rescue-p3: fa-full and fa-rescue before Phase 4b added the lemma list
+ *   to the lexicon (bench/results/phase4b.md); the arms of Phases 1–3 run on that lexicon.
+ * - lm-*: Phase 4b's lemma arms over the lexicon without its list (bench/results/experiments.md).
  * - experiment arms (H1–H10, P1–P4, R1–R10, bench/results/experiments.md): one option
  *   changed; run only when named. Each arm was run against the profile defaults
  *   of its time (the base named in experiments.md); the defaults have since moved
@@ -33,10 +36,15 @@ import PersianStemmer from "../vendor/snowball/persian-stemmer.js";
 import { createAnalyzer, type AnalyzerOptions } from "../src/index.ts";
 import { createLexicon, lexicon } from "../src/lexicon/index.ts";
 import { KEEP, PLURALS, VERBS } from "../src/lexicon/data.ts";
+import { LEMMAS } from "../src/lexicon/lemmas.ts";
 import { CORPORA } from "./corpus.ts";
 import { loadQueries } from "./queries.ts";
 import { splitOf } from "./lib/split.ts";
 import { rawTokens } from "./lib/persian.ts";
+import { udOracle } from "./lib/lemma.ts";
+import { createLemmaLexicon } from "../scripts/lemma/wrap.ts";
+import { loadSaved, trainedWords } from "../scripts/lemma/saved.ts";
+import { predictorOf } from "../scripts/lemma/model.ts";
 
 export type Mode = "index" | "query";
 
@@ -112,6 +120,9 @@ function adapter(name: string, options: AnalyzerOptions, setup: Omit<FaSetup, "o
 }
 const STANDARD: AnalyzerOptions = { profile: "standard" };
 const FULL: AnalyzerOptions = { profile: "full", lexicon };
+/** The lexicon before Phase 4b's lemma list (Phase 3's fa-full); the earlier arms ran on it. */
+const PLAIN = createLexicon(VERBS, KEEP, PLURALS);
+const FULL_P3: AnalyzerOptions = { profile: "full", lexicon: PLAIN };
 
 export const CONFIGS: Config[] = [
   { name: "stock" },
@@ -125,7 +136,7 @@ export const CONFIGS: Config[] = [
   // Phase 1's wiring, the Phase 2 baseline.
   fa("p1-light", { profile: "light" }),
   fa("p1-standard", STANDARD),
-  { ...fa("p1-full", FULL), anyWordAnalyzer: fa("p1-full/any", { ...FULL, verbs: "stem" }).analyzer },
+  { ...fa("p1-full", FULL_P3), anyWordAnalyzer: fa("p1-full/any", { ...FULL_P3, verbs: "stem" }).analyzer },
   // Phase 2 experiment arms (bench/results/experiments.md, "Phase 2"); each on its own engine.
   // P1 arms, with every layout option spelled out: the defaults moved to the winner (pf-surface).
   adapter("pf-all", STANDARD, { pagefind: { terms: "all", title: "keep", surface: false } }, true),
@@ -138,41 +149,80 @@ export const CONFIGS: Config[] = [
   adapter("pf-all-surface", STANDARD, { pagefind: { terms: "all", title: "terms", surface: true } }, true),
   adapter("pf-prefix", STANDARD, { pagefind: { terms: "prefix", title: "terms", surface: true } }, true),
   adapter("flex-dropin", STANDARD, { flexDropIn: true }, true),
-  adapter("flex-dropin-full", FULL, { flexDropIn: true }, true),
+  adapter("flex-dropin-full", FULL_P3, { flexDropIn: true }, true),
   adapter("orama-nosentinel", STANDARD, { exactTerms: false }, true),
-  adapter("orama-nosentinel-full", FULL, { exactTerms: false }, true),
+  adapter("orama-nosentinel-full", FULL_P3, { exactTerms: false }, true),
   adapter("orama-nosentinel-light", { profile: "light" }, { exactTerms: false }, true),
-  adapter("ms-and-lemma", FULL, { combineWith: "AND" }, true),
-  adapter("ms-and-stem", { ...FULL, verbs: "stem" }, { combineWith: "AND" }, true),
+  adapter("ms-and-lemma", FULL_P3, { combineWith: "AND" }, true),
+  adapter("ms-and-stem", { ...FULL_P3, verbs: "stem" }, { combineWith: "AND" }, true),
   // Phase 3: query rescue on fa-full, and the engine-native typo tolerance arms (R4). The
   // other arms (R1, R3, R5–R10) were removed with their options once decided
   // (bench/results/experiments.md, "Phase 3"); their runs stay in bench/data/runs.
   adapter("fa-rescue", FULL, { rescue: true }),
   // R11: every fix replaces the search (rescue before suggestions; its runs are the first fa-rescue runs).
-  adapter("r11-replace", FULL, { rescue: "replace" }, true),
-  { ...adapter("r4-native", FULL, { native: true }, true), engines: ["orama", "minisearch", "lunr"] },
-  { ...adapter("r4-both", FULL, { rescue: true, native: true }, true), engines: ["orama", "minisearch", "lunr"] },
+  adapter("r11-replace", FULL_P3, { rescue: "replace" }, true),
+  { ...adapter("r4-native", FULL_P3, { native: true }, true), engines: ["orama", "minisearch", "lunr"] },
+  { ...adapter("r4-both", FULL_P3, { rescue: true, native: true }, true), engines: ["orama", "minisearch", "lunr"] },
+  // Phase 4b: fa-full with a lemma model behind the lexicon (scripts/lemma/wrap.ts;
+  // bench/results/experiments.md, "Phase 4b"). lm-oracle-ud: gold UD targets for every
+  // word UD lemmatizes one way (all UD files): the upper bound, never shipped.
+  adapter("lm-oracle-ud", { profile: "full", get lexicon() { return (oracle ??= createLemmaLexicon(PLAIN, udOracle())); } }, {}, true),
+  // The trained arms: bench/data/lemma/models/<name>.json (scripts/build-lemma.ts --train),
+  // each at the confidence threshold saved with it.
+  // The chosen list with query rescue, for the rescue guard (false fixes must not rise).
+  { ...adapter("lm-list-rescue", { profile: "full", get lexicon() { const s = loadSaved("lm-list"); return (listRescue ??= createLemmaLexicon(PLAIN, predictorOf(s.model), s.tau)); } }, { rescue: true }, true) },
+  // fa-full and fa-rescue as they were before Phase 4b (their runs: the old fa-full / fa-rescue runs).
+  adapter("fa-full-p3", FULL_P3, {}, true),
+  adapter("fa-rescue-p3", FULL_P3, { rescue: true }, true),
+  ...["lm-tree", "lm-linear", "lm-list", "lm-list-7", "lm-list-ez", "lm-list-ez-7", "lm-tree-mined", "lm-tree-ud", "lm-tree-hazm", "lm-tree-llm"].map((n) => lemmaArm(n)),
   // Kept for reference and the held-out diagnostic. The Phase 1 experiment arms (H1–H10)
   // are defined, with their exact options and bases, in bench/results/experiments.md;
   // they were removed from here when their options were decided (several options no
   // longer exist, and the profile defaults moved to the winners).
-  fa("fa-full-lemma", { profile: "full", lexicon, verbs: "lemma" }, true),
+  fa("fa-full-lemma", { ...FULL_P3, verbs: "lemma" }, true),
   // fa-full as reported in phase1.md (joined «می» by lexicon only), before the rule fallback.
-  { ...fa("fa-full-v1", { profile: "full", lexicon, joinedMi: "lexicon" }, true), anyWordAnalyzer: fa("fa-full-v1/any", { profile: "full", lexicon, joinedMi: "lexicon", verbs: "stem" }).analyzer },
+  { ...fa("fa-full-v1", { ...FULL_P3, joinedMi: "lexicon" }, true), anyWordAnalyzer: fa("fa-full-v1/any", { ...FULL_P3, joinedMi: "lexicon", verbs: "stem" }).analyzer },
   fa("fa-full-heldout", { profile: "full", get lexicon() { return heldOutLexicon(); } }, true),
+  // Phase 4b: the dev verbs out of the lexicon, and out of the lemma model's training (lm-heldout-dev).
+  adapter("fa-full-heldout-dev", { profile: "full", get lexicon() { return heldOutLexicon("dev"); } }, {}, true),
+  lemmaArm("lm-heldout-dev", () => heldOutLexicon("dev")),
   // The light profile before H7's decision; its runs were fa-light's until then.
   fa("h7-light-none", { profile: "light", alefMadda: false }, true),
 ];
 
-let heldOut: ReturnType<typeof createLexicon> | undefined;
-function heldOutLexicon() {
-  if (heldOut) return heldOut;
+let oracle: ReturnType<typeof createLexicon> | undefined;
+let listRescue: ReturnType<typeof createLexicon> | undefined;
+
+/** A lemma-model arm: fa-full with the saved model behind the lexicon. `lemmaSeen` tells lemma-eval which words it trained on. */
+function lemmaArm(name: string, base: () => ReturnType<typeof createLexicon> = () => PLAIN): Config & { lemmaSeen?: (w: string) => boolean } {
+  let lex: ReturnType<typeof createLexicon> | undefined;
+  let seen: Set<string> | undefined;
+  const config = adapter(name, {
+    profile: "full",
+    get lexicon() {
+      if (!lex) { const s = loadSaved(name); lex = createLemmaLexicon(base(), predictorOf(s.model), s.tau); }
+      return lex;
+    },
+  }, {}, true);
+  return { ...config, lemmaSeen: (w) => (seen ??= trainedWords(name)).has(w) };
+}
+const heldOut = new Map<string, ReturnType<typeof createLexicon>>();
+/** The benchmark's verb lemmas of one split (past stems), which the held-out arms remove. */
+export function heldOutVerbs(split: "dev" | "test"): Set<string> {
   const out = new Set<string>();
   for (const corpus of CORPORA) {
-    for (const q of loadQueries(corpus)) if (q.lemma && splitOf(q.base) === "test") out.add(q.lemma.split("#")[0]!);
+    for (const q of loadQueries(corpus)) if (q.lemma && splitOf(q.base) === split) out.add(q.lemma.split("#")[0]!.replace("+", ""));
   }
-  const verbs = VERBS.split(" ").filter((pair) => !out.has(pair.split("#")[0]!)).join(" ");
-  return (heldOut = createLexicon(verbs, KEEP, PLURALS));
+  return out;
+}
+function heldOutLexicon(split: "dev" | "test" = "test") {
+  let lex = heldOut.get(split);
+  if (!lex) {
+    const out = heldOutVerbs(split);
+    lex = createLexicon(VERBS.split(" ").filter((pair) => !out.has(pair.split("#")[0]!)).join(" "), KEEP, PLURALS, LEMMAS);
+    heldOut.set(split, lex);
+  }
+  return lex;
 }
 
 export const configByName = (name: string) => {

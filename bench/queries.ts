@@ -34,6 +34,8 @@ export interface Query {
   /** Verb lemma changed by a verb variant (per-lemma averages). */
   lemma?: string;
   text: string;
+  /** Lemma set (bench/lib/lemma-sets.ts): the lemma is absent from UD's train files. */
+  unseenUd?: true;
   /** Extra target sampled only to fill a rare variant type; excluded from the canonical control row. */
   supplement?: true;
 }

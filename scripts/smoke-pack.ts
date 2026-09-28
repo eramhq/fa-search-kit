@@ -101,6 +101,8 @@ import { canonicalKey } from "fa-search-kit/analytics";
 const docs = [{ id: "a", title: "كتابهاي قديمي" }, { id: "b", title: "ماشین قرمز" }];
 const q = "کتاب";
 assert.deepEqual(createAnalyzer({ profile: "full", lexicon }).analyze("می‌روم", { mode: "query" }), ["رفت"]);
+// The lexicon's lemma list: «نویسندگان» finds «نویسنده».
+assert.deepEqual(createAnalyzer({ profile: "full", lexicon }).analyze("نویسندگان", { mode: "query" }), createAnalyzer({ profile: "full", lexicon }).analyze("نویسنده", { mode: "query" }));
 
 const db = create({ schema: { title: "string" }, components: { tokenizer: faTokenizer() } });
 await insertMultiple(db, docs);

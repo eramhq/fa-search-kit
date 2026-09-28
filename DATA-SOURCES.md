@@ -9,6 +9,7 @@ evaluation only. This file lists every piece of data that ends up in the bundles
 | Present → past verb stems (356 pairs) | `src/lexicon/data.ts` `VERBS` | Hazm `verbs.dat`, rev `a399c829`; pairs with < 20 uses of all their forms dropped | MIT |
 | Broken plurals (103 pairs) | `src/lexicon/data.ts` `PLURALS` | written by hand for this project (`scripts/build-lexicon.ts`), kept when the plural is attested | project's own (MIT) |
 | Keep list (1,040 words) | `src/lexicon/data.ts` `KEEP` | **selected by rules from word counts** (see below) | see below |
+| Lemma list (579 words, 30 edits) | `src/lexicon/lemmas.ts` `LEMMAS` | **labels of words from our own word list by two AI models** (gpt-6-luna, Claude), kept where both agree, plus rules over Hazm's verbs (see below) | see below |
 | Protected words (23) | `src/words.ts` `PROTECTED` | Snowball's own ان exceptions (folded) + words selected like the keep list, + 2 by hand | see below |
 | Joined-«می» exceptions (46 entries) | `src/words.ts` `MI_EXCEPTIONS` | selected by rules from word counts | see below |
 | Keyboard layouts (3 × 48 keys) | `src/rescue/keyboard.ts` `LAYOUTS` | which key types which letter: the ISIRI 9147 standard (table 1) and the layouts the OSes ship (Windows kbdfar/kbdfa KLC dumps, macOS layouts read with `UCKeyTranslate`); full reference with sources in `bench/lib/keyboards.ts`, checked key by key in `test/rescue.test.ts` | facts about the layouts, no copied files (project's own, MIT) |
@@ -36,6 +37,29 @@ is ever wanted (e.g. before a large public release), the same rules can run over
 from an MIT/public-domain corpus instead; the lists would then be rebuilt and the
 benchmark rerun. Hazm's `words.dat` was deliberately not used: whether it derives from
 Bijankhan (GPL) is unchecked.
+
+## The lemma list (Phase 4b)
+
+`scripts/build-lemma.ts` builds `src/lexicon/lemmas.ts`: for each listed word, the edit
+from the word to its lemma's term («نویسندگان» → نویسنده). The words and their labels
+come from:
+
+- **the same word counts** as the lists above (`bench/data/vocab.tsv`): which words to
+  label, and rules over them;
+- **Hazm's verb list** (MIT), conjugated by our own code (`bench/lib/verbs.ts`);
+- **labels by two AI models**: OpenAI gpt-6-luna (through the Codex CLI) and Anthropic
+  Claude, each given one word at a time from our list, with no text from any source, and
+  the prompt in `bench/lemma-llm/prompt.md`. A label is kept only when both models give the
+  same answer. Provenance (models, date, prompt and shard hashes):
+  `bench/results/lemma-llm-manifest.json`.
+
+OpenAI's and Anthropic's terms assign the outputs to the user. A list of 579 word → lemma
+pairs does not compete with either provider's models. The labels were **checked** against
+the UD treebanks (CC BY-SA, evaluation only: `bench/results/lemma-labels.md`), but not
+copied from them: comparison models trained on UD gold and on Hazm's lemmatizer
+(`bench/lemma-hazm.ts`; Hazm's `words.dat` provenance is unchecked) were measured and
+never shipped. The label cache (`bench/data/lemma/`) is gitignored. The build regenerates
+the same `lemmas.ts` from it, byte for byte.
 
 Evaluation-only data (never bundled): UD Persian-Seraji and PerDT (CC BY-SA 4.0),
 the benchmark corpora and queries under `bench/data/` (gitignored), and the demo site

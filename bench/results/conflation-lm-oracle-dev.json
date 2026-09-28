@@ -1,0 +1,754 @@
+{
+ "seraji": {
+  "none": {
+   "ui": 1,
+   "oi": 0,
+   "umt": 2698,
+   "dmt": 2698,
+   "wmt": 0,
+   "dnt": 7128278,
+   "byPos": {
+    "NOUN": {
+     "umt": 591,
+     "dmt": 591
+    },
+    "VERB": {
+     "umt": 1728,
+     "dmt": 1728
+    },
+    "DET": {
+     "umt": 7,
+     "dmt": 7
+    },
+    "ADJ": {
+     "umt": 74,
+     "dmt": 74
+    },
+    "ADP": {
+     "umt": 21,
+     "dmt": 21
+    },
+    "CCONJ": {
+     "umt": 0,
+     "dmt": 0
+    },
+    "PRON": {
+     "umt": 9,
+     "dmt": 9
+    },
+    "PART": {
+     "umt": 0,
+     "dmt": 0
+    },
+    "SCONJ": {
+     "umt": 0,
+     "dmt": 0
+    },
+    "AUX": {
+     "umt": 262,
+     "dmt": 262
+    },
+    "ADV": {
+     "umt": 5,
+     "dmt": 5
+    },
+    "INTJ": {
+     "umt": 0,
+     "dmt": 0
+    },
+    "X": {
+     "umt": 1,
+     "dmt": 1
+    }
+   }
+  },
+  "fa-full": {
+   "ui": 0.566716085989622,
+   "oi": 0.00005751739760991364,
+   "umt": 1529,
+   "dmt": 2698,
+   "wmt": 410,
+   "dnt": 7128278,
+   "byPos": {
+    "NOUN": {
+     "umt": 214,
+     "dmt": 591
+    },
+    "VERB": {
+     "umt": 1114,
+     "dmt": 1728
+    },
+    "DET": {
+     "umt": 4,
+     "dmt": 7
+    },
+    "ADJ": {
+     "umt": 38,
+     "dmt": 74
+    },
+    "ADP": {
+     "umt": 12,
+     "dmt": 21
+    },
+    "CCONJ": {
+     "umt": 0,
+     "dmt": 0
+    },
+    "PRON": {
+     "umt": 6,
+     "dmt": 9
+    },
+    "PART": {
+     "umt": 0,
+     "dmt": 0
+    },
+    "SCONJ": {
+     "umt": 0,
+     "dmt": 0
+    },
+    "AUX": {
+     "umt": 139,
+     "dmt": 262
+    },
+    "ADV": {
+     "umt": 2,
+     "dmt": 5
+    },
+    "INTJ": {
+     "umt": 0,
+     "dmt": 0
+    },
+    "X": {
+     "umt": 0,
+     "dmt": 1
+    }
+   }
+  },
+  "lm-oracle-ud": {
+   "ui": 0.44329132690882134,
+   "oi": 0.00006425114172034255,
+   "umt": 1196,
+   "dmt": 2698,
+   "wmt": 458,
+   "dnt": 7128278,
+   "byPos": {
+    "NOUN": {
+     "umt": 55,
+     "dmt": 591
+    },
+    "VERB": {
+     "umt": 968,
+     "dmt": 1728
+    },
+    "DET": {
+     "umt": 4,
+     "dmt": 7
+    },
+    "ADJ": {
+     "umt": 12,
+     "dmt": 74
+    },
+    "ADP": {
+     "umt": 10,
+     "dmt": 21
+    },
+    "CCONJ": {
+     "umt": 0,
+     "dmt": 0
+    },
+    "PRON": {
+     "umt": 6,
+     "dmt": 9
+    },
+    "PART": {
+     "umt": 0,
+     "dmt": 0
+    },
+    "SCONJ": {
+     "umt": 0,
+     "dmt": 0
+    },
+    "AUX": {
+     "umt": 139,
+     "dmt": 262
+    },
+    "ADV": {
+     "umt": 2,
+     "dmt": 5
+    },
+    "INTJ": {
+     "umt": 0,
+     "dmt": 0
+    },
+    "X": {
+     "umt": 0,
+     "dmt": 1
+    }
+   }
+  }
+ },
+ "seraji-families": {
+  "none": {
+   "ui": 1,
+   "oi": 0,
+   "umt": 2931,
+   "dmt": 2931,
+   "wmt": 0,
+   "dnt": 7116720,
+   "byPos": {
+    "NOUN": {
+     "umt": 634,
+     "dmt": 634
+    },
+    "VERB": {
+     "umt": 1868,
+     "dmt": 1868
+    },
+    "DET": {
+     "umt": 7,
+     "dmt": 7
+    },
+    "ADJ": {
+     "umt": 86,
+     "dmt": 86
+    },
+    "ADP": {
+     "umt": 21,
+     "dmt": 21
+    },
+    "CCONJ": {
+     "umt": 0,
+     "dmt": 0
+    },
+    "PRON": {
+     "umt": 9,
+     "dmt": 9
+    },
+    "PART": {
+     "umt": 0,
+     "dmt": 0
+    },
+    "SCONJ": {
+     "umt": 0,
+     "dmt": 0
+    },
+    "AUX": {
+     "umt": 300,
+     "dmt": 300
+    },
+    "ADV": {
+     "umt": 5,
+     "dmt": 5
+    },
+    "INTJ": {
+     "umt": 0,
+     "dmt": 0
+    },
+    "X": {
+     "umt": 1,
+     "dmt": 1
+    }
+   }
+  },
+  "fa-full": {
+   "ui": 0.5448652337086318,
+   "oi": 0.00003259928731213256,
+   "umt": 1597,
+   "dmt": 2931,
+   "wmt": 232,
+   "dnt": 7116720,
+   "byPos": {
+    "NOUN": {
+     "umt": 220,
+     "dmt": 634
+    },
+    "VERB": {
+     "umt": 1155,
+     "dmt": 1868
+    },
+    "DET": {
+     "umt": 4,
+     "dmt": 7
+    },
+    "ADJ": {
+     "umt": 48,
+     "dmt": 86
+    },
+    "ADP": {
+     "umt": 12,
+     "dmt": 21
+    },
+    "CCONJ": {
+     "umt": 0,
+     "dmt": 0
+    },
+    "PRON": {
+     "umt": 6,
+     "dmt": 9
+    },
+    "PART": {
+     "umt": 0,
+     "dmt": 0
+    },
+    "SCONJ": {
+     "umt": 0,
+     "dmt": 0
+    },
+    "AUX": {
+     "umt": 150,
+     "dmt": 300
+    },
+    "ADV": {
+     "umt": 2,
+     "dmt": 5
+    },
+    "INTJ": {
+     "umt": 0,
+     "dmt": 0
+    },
+    "X": {
+     "umt": 0,
+     "dmt": 1
+    }
+   }
+  },
+  "lm-oracle-ud": {
+   "ui": 0.42749914704878883,
+   "oi": 0.0000377983115817399,
+   "umt": 1253,
+   "dmt": 2931,
+   "wmt": 269,
+   "dnt": 7116720,
+   "byPos": {
+    "NOUN": {
+     "umt": 60,
+     "dmt": 634
+    },
+    "VERB": {
+     "umt": 999,
+     "dmt": 1868
+    },
+    "DET": {
+     "umt": 4,
+     "dmt": 7
+    },
+    "ADJ": {
+     "umt": 22,
+     "dmt": 86
+    },
+    "ADP": {
+     "umt": 10,
+     "dmt": 21
+    },
+    "CCONJ": {
+     "umt": 0,
+     "dmt": 0
+    },
+    "PRON": {
+     "umt": 6,
+     "dmt": 9
+    },
+    "PART": {
+     "umt": 0,
+     "dmt": 0
+    },
+    "SCONJ": {
+     "umt": 0,
+     "dmt": 0
+    },
+    "AUX": {
+     "umt": 150,
+     "dmt": 300
+    },
+    "ADV": {
+     "umt": 2,
+     "dmt": 5
+    },
+    "INTJ": {
+     "umt": 0,
+     "dmt": 0
+    },
+    "X": {
+     "umt": 0,
+     "dmt": 1
+    }
+   }
+  }
+ },
+ "perdt": {
+  "none": {
+   "ui": 1,
+   "oi": 0,
+   "umt": 10122,
+   "dmt": 10122,
+   "wmt": 0,
+   "dnt": 23853564,
+   "byPos": {
+    "ADP": {
+     "umt": 34,
+     "dmt": 34
+    },
+    "NOUN": {
+     "umt": 1675,
+     "dmt": 1675
+    },
+    "PROPN": {
+     "umt": 67,
+     "dmt": 67
+    },
+    "ADJ": {
+     "umt": 162,
+     "dmt": 162
+    },
+    "DET": {
+     "umt": 2,
+     "dmt": 2
+    },
+    "CCONJ": {
+     "umt": 0,
+     "dmt": 0
+    },
+    "VERB": {
+     "umt": 7044,
+     "dmt": 7044
+    },
+    "SCONJ": {
+     "umt": 0,
+     "dmt": 0
+    },
+    "PRON": {
+     "umt": 23,
+     "dmt": 23
+    },
+    "AUX": {
+     "umt": 1111,
+     "dmt": 1111
+    },
+    "INTJ": {
+     "umt": 0,
+     "dmt": 0
+    },
+    "ADV": {
+     "umt": 4,
+     "dmt": 4
+    },
+    "PART": {
+     "umt": 0,
+     "dmt": 0
+    }
+   }
+  },
+  "fa-full": {
+   "ui": 0.5771586642955937,
+   "oi": 0.000051564621538316037,
+   "umt": 5842,
+   "dmt": 10122,
+   "wmt": 1230,
+   "dnt": 23853564,
+   "byPos": {
+    "ADP": {
+     "umt": 26,
+     "dmt": 34
+    },
+    "NOUN": {
+     "umt": 711,
+     "dmt": 1675
+    },
+    "PROPN": {
+     "umt": 24,
+     "dmt": 67
+    },
+    "ADJ": {
+     "umt": 97,
+     "dmt": 162
+    },
+    "DET": {
+     "umt": 2,
+     "dmt": 2
+    },
+    "CCONJ": {
+     "umt": 0,
+     "dmt": 0
+    },
+    "VERB": {
+     "umt": 4246,
+     "dmt": 7044
+    },
+    "SCONJ": {
+     "umt": 0,
+     "dmt": 0
+    },
+    "PRON": {
+     "umt": 19,
+     "dmt": 23
+    },
+    "AUX": {
+     "umt": 716,
+     "dmt": 1111
+    },
+    "INTJ": {
+     "umt": 0,
+     "dmt": 0
+    },
+    "ADV": {
+     "umt": 1,
+     "dmt": 4
+    },
+    "PART": {
+     "umt": 0,
+     "dmt": 0
+    }
+   }
+  },
+  "lm-oracle-ud": {
+   "ui": 0.49683856945267735,
+   "oi": 0.00005319959734318947,
+   "umt": 5029,
+   "dmt": 10122,
+   "wmt": 1269,
+   "dnt": 23853564,
+   "byPos": {
+    "ADP": {
+     "umt": 19,
+     "dmt": 34
+    },
+    "NOUN": {
+     "umt": 275,
+     "dmt": 1675
+    },
+    "PROPN": {
+     "umt": 14,
+     "dmt": 67
+    },
+    "ADJ": {
+     "umt": 47,
+     "dmt": 162
+    },
+    "DET": {
+     "umt": 2,
+     "dmt": 2
+    },
+    "CCONJ": {
+     "umt": 0,
+     "dmt": 0
+    },
+    "VERB": {
+     "umt": 3936,
+     "dmt": 7044
+    },
+    "SCONJ": {
+     "umt": 0,
+     "dmt": 0
+    },
+    "PRON": {
+     "umt": 19,
+     "dmt": 23
+    },
+    "AUX": {
+     "umt": 716,
+     "dmt": 1111
+    },
+    "INTJ": {
+     "umt": 0,
+     "dmt": 0
+    },
+    "ADV": {
+     "umt": 1,
+     "dmt": 4
+    },
+    "PART": {
+     "umt": 0,
+     "dmt": 0
+    }
+   }
+  }
+ },
+ "perdt-families": {
+  "none": {
+   "ui": 1,
+   "oi": 0,
+   "umt": 10814,
+   "dmt": 10814,
+   "wmt": 0,
+   "dnt": 23811439,
+   "byPos": {
+    "ADP": {
+     "umt": 34,
+     "dmt": 34
+    },
+    "NOUN": {
+     "umt": 1827,
+     "dmt": 1827
+    },
+    "PROPN": {
+     "umt": 67,
+     "dmt": 67
+    },
+    "ADJ": {
+     "umt": 197,
+     "dmt": 197
+    },
+    "DET": {
+     "umt": 2,
+     "dmt": 2
+    },
+    "CCONJ": {
+     "umt": 0,
+     "dmt": 0
+    },
+    "VERB": {
+     "umt": 7513,
+     "dmt": 7513
+    },
+    "SCONJ": {
+     "umt": 0,
+     "dmt": 0
+    },
+    "PRON": {
+     "umt": 23,
+     "dmt": 23
+    },
+    "AUX": {
+     "umt": 1147,
+     "dmt": 1147
+    },
+    "INTJ": {
+     "umt": 0,
+     "dmt": 0
+    },
+    "ADV": {
+     "umt": 4,
+     "dmt": 4
+    },
+    "PART": {
+     "umt": 0,
+     "dmt": 0
+    }
+   }
+  },
+  "fa-full": {
+   "ui": 0.563251340854448,
+   "oi": 0.000030237567750525282,
+   "umt": 6091,
+   "dmt": 10814,
+   "wmt": 720,
+   "dnt": 23811439,
+   "byPos": {
+    "ADP": {
+     "umt": 26,
+     "dmt": 34
+    },
+    "NOUN": {
+     "umt": 747,
+     "dmt": 1827
+    },
+    "PROPN": {
+     "umt": 24,
+     "dmt": 67
+    },
+    "ADJ": {
+     "umt": 121,
+     "dmt": 197
+    },
+    "DET": {
+     "umt": 2,
+     "dmt": 2
+    },
+    "CCONJ": {
+     "umt": 0,
+     "dmt": 0
+    },
+    "VERB": {
+     "umt": 4419,
+     "dmt": 7513
+    },
+    "SCONJ": {
+     "umt": 0,
+     "dmt": 0
+    },
+    "PRON": {
+     "umt": 19,
+     "dmt": 23
+    },
+    "AUX": {
+     "umt": 732,
+     "dmt": 1147
+    },
+    "INTJ": {
+     "umt": 0,
+     "dmt": 0
+    },
+    "ADV": {
+     "umt": 1,
+     "dmt": 4
+    },
+    "PART": {
+     "umt": 0,
+     "dmt": 0
+    }
+   }
+  },
+  "lm-oracle-ud": {
+   "ui": 0.4858516737562419,
+   "oi": 0.00003086751707866123,
+   "umt": 5254,
+   "dmt": 10814,
+   "wmt": 735,
+   "dnt": 23811439,
+   "byPos": {
+    "ADP": {
+     "umt": 19,
+     "dmt": 34
+    },
+    "NOUN": {
+     "umt": 310,
+     "dmt": 1827
+    },
+    "PROPN": {
+     "umt": 14,
+     "dmt": 67
+    },
+    "ADJ": {
+     "umt": 70,
+     "dmt": 197
+    },
+    "DET": {
+     "umt": 2,
+     "dmt": 2
+    },
+    "CCONJ": {
+     "umt": 0,
+     "dmt": 0
+    },
+    "VERB": {
+     "umt": 4087,
+     "dmt": 7513
+    },
+    "SCONJ": {
+     "umt": 0,
+     "dmt": 0
+    },
+    "PRON": {
+     "umt": 19,
+     "dmt": 23
+    },
+    "AUX": {
+     "umt": 732,
+     "dmt": 1147
+    },
+    "INTJ": {
+     "umt": 0,
+     "dmt": 0
+    },
+    "ADV": {
+     "umt": 1,
+     "dmt": 4
+    },
+    "PART": {
+     "umt": 0,
+     "dmt": 0
+    }
+   }
+  }
+ }
+}

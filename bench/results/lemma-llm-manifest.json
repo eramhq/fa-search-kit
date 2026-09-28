@@ -1,0 +1,78 @@
+{
+ "prompt": {
+  "file": "bench/lemma-llm/prompt.md",
+  "sha256_12": "91432d40888a"
+ },
+ "families": {
+  "luna": "OpenAI gpt-6-luna via Codex CLI 0.158.0, model_reasoning_effort=xhigh, one fresh session per shard (bench/lemma-llm/run-luna.sh)",
+  "claude": "Anthropic claude-opus-5-5 via Claude Code subagents, one per shard"
+ },
+ "input": "word types from bench/data/vocab.tsv (our counts over the raw benchmark sources), no sentence context",
+ "acceptance": "both families give the same term; disagreement defers",
+ "labelled": 24254,
+ "dropped": [
+  "ezafe after consonant",
+  "ات",
+  "ezafe after vowel"
+ ],
+ "disagreements": 2185,
+ "shards": {
+  "dev-91432d40888a": {
+   "set": "dev",
+   "prompt": "91432d40888a",
+   "created": "2026-09-28",
+   "words": 300,
+   "shards": {
+    "shard-00.tsv": "35453352447c"
+   }
+  },
+  "bulk-91432d40888a": {
+   "set": "bulk",
+   "prompt": "91432d40888a",
+   "created": "2026-09-28",
+   "words": 23954,
+   "shards": {
+    "shard-00.tsv": "595526a6e822",
+    "shard-01.tsv": "38590d111370",
+    "shard-02.tsv": "91ca74a2e710",
+    "shard-03.tsv": "51aee8c3b577",
+    "shard-04.tsv": "a4617c68eb54",
+    "shard-05.tsv": "e8ea142747e2",
+    "shard-06.tsv": "7e7a0f5ed260",
+    "shard-07.tsv": "f0d30a34a70f",
+    "shard-08.tsv": "531cffd84a60",
+    "shard-09.tsv": "910b0e2e1a44",
+    "shard-10.tsv": "f6eac8e81c5b",
+    "shard-11.tsv": "a593b20f217b",
+    "shard-12.tsv": "9ff912aba96c",
+    "shard-13.tsv": "86d7b7e316f3",
+    "shard-14.tsv": "9d8e51c05757",
+    "shard-15.tsv": "0968d3c85169",
+    "shard-16.tsv": "f62e1446a1ff",
+    "shard-17.tsv": "8b7644b4bf04",
+    "shard-18.tsv": "afa075544efc",
+    "shard-19.tsv": "a6e0b402d038",
+    "shard-20.tsv": "8756be262660",
+    "shard-21.tsv": "36b0a2519b03",
+    "shard-22.tsv": "5b5647fb86ef",
+    "shard-23.tsv": "c62cd134bb60",
+    "shard-24.tsv": "068cba303c5b",
+    "shard-25.tsv": "8499f4393b45",
+    "shard-26.tsv": "c39e95e097ab",
+    "shard-27.tsv": "d411f4967275",
+    "shard-28.tsv": "a0d4c8ea0f08",
+    "shard-29.tsv": "52d1aa2a0b11",
+    "shard-30.tsv": "7172ce14ef2e",
+    "shard-31.tsv": "5aa0aa97f33a",
+    "shard-32.tsv": "1debae35e9e5",
+    "shard-33.tsv": "c4ab68cca594",
+    "shard-34.tsv": "2293076211de",
+    "shard-35.tsv": "4fbcea5fb805",
+    "shard-36.tsv": "eab336ac1bee",
+    "shard-37.tsv": "c3e9df3821b7",
+    "shard-38.tsv": "02e8e5cee970",
+    "shard-39.tsv": "ceca71a8527e"
+   }
+  }
+ }
+}
