@@ -14,6 +14,9 @@ node bench/corpus.ts     # sample the three corpora (20,000 docs each)
 node bench/queries.ts    # build known-item queries and their variants
 node bench/run.ts        # main configs × engines; cached per run in bench/data/runs
 node bench/run.ts --config h8-keep,h2-zwnj   # experiment arms (and tuned) run only when named
+node bench/run.ts --config fa-full   # after an analyzer/lexicon change: re-runs only where the words changed
+node bench/run.ts --config fa-full --stamp   # record term fingerprints on current runs (no re-run)
+node bench/run.ts --config fa-full --force   # after changing engine or adapter code: re-run everything
 node bench/report.ts --split dev       # bench/results/report-dev.{md,json}
 node bench/compare.ts snowball fa-standard --split dev   # the gate, see below
 node bench/conflation.ts --configs snowball,fa-standard  # UD gold lemmas: under/over-stemming

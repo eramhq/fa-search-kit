@@ -9,6 +9,13 @@
  * Each (corpus, engine, config) run is cached in bench/data/runs/ as one rank per
  * query (0 = not in the top 10), so a rerun only does what is missing. Then
  * `node bench/report.ts` turns the runs into the report.
+ *
+ * A run also records its config's term fingerprint (bench/lib/fingerprint.ts): the terms
+ * of every page and query. Without --force a cached run is re-run only when that
+ * fingerprint changed, so after an analyzer or lexicon change `node bench/run.ts --config
+ * fa-full` re-runs just the corpora whose words the change touched. `--stamp` records the
+ * fingerprint on current runs that predate it, without re-running them. After changing
+ * engine or adapter code (not in the fingerprint), use --force.
  */
 import { spawn } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -20,6 +27,7 @@ import { createHash } from "node:crypto";
 import { loadQueries, type Query } from "./queries.ts";
 import { loadSet } from "./lib/rescue-sets.ts";
 import { splitOf } from "./lib/split.ts";
+import { termFingerprint } from "./lib/fingerprint.ts";
 
 export const RUN_DIR = new URL("data/runs/", import.meta.url);
 /**
@@ -37,6 +45,8 @@ export interface Run {
   ids: string[];
   /** Hash of every query's id and text: a regenerated query set with the same ids is still a different set. */
   queryHash?: string;
+  /** The config's term fingerprint when it ran (bench/lib/fingerprint.ts): unchanged terms, unchanged results. */
+  termHash?: string;
   /** 1-based rank of the target in the top 10, or 0. */
   ranks: number[];
   buildMs: number;
@@ -60,14 +70,30 @@ export function isCurrent(file: URL, queries: Query[]): boolean {
   return run.queryHash === queryHash(queries);
 }
 
-async function runOne(corpus: CorpusName, engineName: string, configs: string[], force: boolean, split: "all" | "dev", set: string) {
+async function runOne(corpus: CorpusName, engineName: string, configs: string[], force: boolean, split: "all" | "dev", set: string, stamp = false) {
   const engine = ENGINES.find((e) => e.name === engineName);
   if (!engine) throw new Error(`unknown engine ${engineName}`);
   const docs = await loadCorpus(corpus);
   const queries = (set ? loadSet(corpus, set) : loadQueries(corpus)).filter((q) => split === "all" || splitOf(q.base) === "dev");
   for (const config of CONFIGS.filter((c) => configs.includes(c.name) && (!c.engines || c.engines.includes(engine.name)))) {
     const file = runFile(corpus, engine.name, config.name, split, set);
-    if (existsSync(file) && !force && isCurrent(file, queries)) continue;
+    const label = `${corpus}${set ? `/${set}` : ""} ${engine.name} ${config.name}`;
+    let terms: string | undefined;
+    if (existsSync(file) && !force && isCurrent(file, queries)) {
+      // A current run is reused unless the config's terms changed since it was made.
+      const old = (JSON.parse(readFileSync(file, "utf8")) as Run).termHash;
+      if (!old && !stamp) continue;
+      terms = termFingerprint(config, docs, queries);
+      if (!old) {
+        if (terms) writeFileSync(file, JSON.stringify({ ...JSON.parse(readFileSync(file, "utf8")), termHash: terms }));
+        console.log(`${label}: stamped (terms ${terms ?? "n/a"}), not re-run`);
+        continue;
+      }
+      if (terms === old) { console.log(`${label}: terms unchanged, skipped`); continue; }
+      console.log(`${label}: terms changed, re-running`);
+    }
+    if (stamp) { console.log(`${label}: no current run to stamp`); continue; }
+    terms ??= termFingerprint(config, docs, queries);
     const t0 = performance.now();
     const searcher = await engine.build(docs, config);
     const t1 = performance.now();
@@ -83,7 +109,7 @@ async function runOne(corpus: CorpusName, engineName: string, configs: string[],
     const t2 = performance.now();
     await searcher.close?.();
     const run: Run = {
-      corpus, engine: engine.name, config: config.name, ids: queries.map((q) => q.id), queryHash: queryHash(queries), ranks,
+      corpus, engine: engine.name, config: config.name, ids: queries.map((q) => q.id), queryHash: queryHash(queries), ...(terms ? { termHash: terms } : {}), ranks,
       buildMs: Math.round(t1 - t0), searchMs: Math.round(t2 - t1),
       ...(searcher.last ? { fixed, bytes, suggested, suggestedRanks } : {}),
     };
@@ -98,7 +124,7 @@ if (import.meta.main) {
   const { values } = parseArgs({
     options: {
       corpus: { type: "string" }, engine: { type: "string" }, config: { type: "string" },
-      force: { type: "boolean", default: false }, jobs: { type: "string", default: "4" },
+      force: { type: "boolean", default: false }, stamp: { type: "boolean", default: false }, jobs: { type: "string", default: "4" },
       split: { type: "string", default: "all" }, set: { type: "string", default: "" },
     },
   });
@@ -106,11 +132,11 @@ if (import.meta.main) {
   // Default: the main configs. Tuned (Orama tuned alone takes 2.5 h) and experiment arms run only when named.
   const configs = values.config ? values.config.split(",") : CONFIGS.filter((c) => !c.tuned && !c.experiment).map((c) => c.name);
   if (values.split !== "all" && values.split !== "dev") throw new Error("--split is all or dev (test is only ever read from full runs)");
-  if (values.corpus && values.engine && !`${values.corpus}${values.engine}`.includes(",")) await runOne(values.corpus as CorpusName, values.engine, configs, values.force, values.split, values.set);
+  if (values.corpus && values.engine && !`${values.corpus}${values.engine}`.includes(",")) await runOne(values.corpus as CorpusName, values.engine, configs, values.force, values.split, values.set, values.stamp);
   else await runAll(values);
 }
 
-async function runAll(values: { corpus?: string; engine?: string; config?: string; force: boolean; jobs: string; split: string; set: string }) {
+async function runAll(values: { corpus?: string; engine?: string; config?: string; force: boolean; stamp: boolean; jobs: string; split: string; set: string }) {
   // Fan out one child process per (corpus, engine): isolates memory and the
   // Pagefind fetch shim, and uses the cores.
   const jobs = CORPORA.filter((c) => !values.corpus || values.corpus.split(",").includes(c))
@@ -121,7 +147,7 @@ async function runAll(values: { corpus?: string; engine?: string; config?: strin
     for (let job = queue.shift(); job; job = queue.shift()) {
       const [corpus, engine] = job;
       const args = ["--max-old-space-size=6000", new URL(import.meta.url).pathname, "--corpus", corpus, "--engine", engine,
-        ...(values.config ? ["--config", values.config] : []), ...(values.force ? ["--force"] : []), "--split", values.split, "--set", values.set];
+        ...(values.config ? ["--config", values.config] : []), ...(values.force ? ["--force"] : []), ...(values.stamp ? ["--stamp"] : []), "--split", values.split, "--set", values.set];
       const code = await new Promise<number>((resolve) => spawn(process.execPath, args, { stdio: "inherit" }).on("exit", (c) => resolve(c ?? 1)));
       if (code !== 0) { failed++; console.error(`FAILED ${corpus} ${engine} (exit ${code})`); }
     }

@@ -1142,4 +1142,12 @@ test, main and lemma sets: 0 up, 0 down, **0 queries found → lost**. Conflatio
 (bench/results/conflation-4b-fixes.md): UI −0.1 to −0.2 on both treebanks, OI equal, one
 added wrong merge («نمی‌زد» → «نزد», the kept-negation term that «نزدند» already shares with
 «نزد» "near"). Rescue: `fa-rescue-p3 → fa-rescue-4b` (test) 0 up, 0 down, false fixes
-unchanged; fa-rescue re-run with the fixes.
+unchanged. fa-rescue re-run with the fixes (`fa-rescue-4b → fa-rescue`, dev and test): 0 up,
+0 down, 0 queries found → lost, false fixes identical.
+
+**Benchmark: skip runs whose terms did not change.** bench/run.ts now records each run's
+term fingerprint (bench/lib/fingerprint.ts: every page's and query's terms under both verb
+settings, plus the adapter setup) and, without --force, re-runs a cached run only when it
+changed. On these fixes: products' fingerprint is unchanged (no product word is touched), so
+its 5 engine runs would have been skipped; wiki and news change and re-run, as they must.
+A fingerprint costs 10–25 s per corpus; engine and adapter code are not in it (--force).

@@ -86,5 +86,5 @@ cells up or down, **0 queries found → lost**. Conflation: UI down 0.1–0.2 po
 treebanks, OI unchanged. One wrong merge is added: «نمی‌زد» → «نزد», which is also «نزد»
 ("near"). It is the existing kept-negation term (ن + past stem), which «نزدند» and «نمی‌زنم»
 already share. Query rescue with the shipped list against Phase 3 (test, `fa-rescue-p3 →
-fa-rescue-4b`): 335 cells, 0 up, 0 down; false fixes unchanged. `fa-rescue` is re-run with
-the fixes.
+fa-rescue-4b`): 335 cells, 0 up, 0 down; false fixes unchanged. `fa-rescue` re-run with the fixes against `fa-rescue-4b`: dev and
+test 0 up, 0 down, 0 queries found → lost; false fixes identical.
