@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "defaultLocale": "en",
+  "locales": [
+    "en",
+    "fa"
+  ],
+  "entry": "overview",
+  "sections": [
+    {
+      "id": "start",
+      "title": {
+        "en": "Getting started",
+        "fa": "شروع استفاده"
+      },
+      "pages": [
+        "overview",
+        "installation",
+        "getting-started"
+      ]
+    },
+    {
+      "id": "analysis",
+      "title": {
+        "en": "Text analysis",
+        "fa": "پردازش متن"
+      },
+      "pages": [
+        "text-analysis",
+        "profiles",
+        "indexing"
+      ]
+    },
+    {
+      "id": "integration",
+      "title": {
+        "en": "Integration guides",
+        "fa": "راهنماهای اتصال"
+      },
+      "pages": [
+        "guides/pagefind",
+        "guides/client-engines",
+        "query-rescue",
+        "browser-loading",
+        "recipes"
+      ]
+    },
+    {
+      "id": "reference",
+      "title": {
+        "en": "Reference and evidence",
+        "fa": "مرجع و شواهد"
+      },
+      "pages": [
+        "api/core",
+        "api/adapters",
+        "api/rescue",
+        "data-and-benchmarks"
+      ]
+    }
+  ]
+}

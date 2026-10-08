@@ -13,11 +13,31 @@ benchmark of real Persian pages and the ways people actually type ([bench/](benc
 > Status: not published to npm yet. Build it from this repo (`npm run build`) or
 > `npm pack` it. [Live demo](https://eramhq.github.io/fa-search-kit/).
 
+## Documentation
+
+Complete developer guides and public API reference: [English](docs/en/overview.md) · [فارسی](docs/fa/overview.md).
+Start with [installation](docs/en/installation.md), [a working search](docs/en/getting-started.md),
+[Pagefind](docs/en/guides/pagefind.md), or [known issues](docs/en/recipes.md).
+
 ## Install
 
+The public npm registry returned E404 for `fa-search-kit` on 2026-10-08. Build and
+pack this checkout first (Node.js 22+; documentation validated with Node.js 24.8.0):
+
 ```sh
-npm install fa-search-kit
+npm ci
+npm run build
+npm pack
 ```
+
+In your application, install the generated tarball using its actual absolute path:
+
+```sh
+npm install /absolute/path/to/fa-search-kit/fa-search-kit-0.0.0.tgz
+```
+
+See the [installation guide](docs/en/installation.md) for source cloning, ESM setup,
+and optional engine versions.
 
 Zero runtime dependencies. The search engines are optional peer dependencies: the
 adapters take the engine you already use and never import one themselves.
@@ -30,7 +50,12 @@ adapters take the engine you already use and never import one themselves.
 | `standard` (default) | + Snowball's Persian stemmer (3.1.1) with the fixes it needs: joined «میروم», closed suffixes after a half-space, compound parts, both half-space spellings, آ typed as ا | core: **4.95 KB** |
 | `full` | + `fa-search-kit/lexicon`: present → past verb stems («می‌روم», «رفتند» → «رفت»), possessive clitics, broken plurals (کتب → کتاب), a keep list against over-stemming, and a list of ~580 inflected forms the rules miss («نویسندگان» → «نویسنده», «بازیگران», «سخت‌تر») | + 10.87 KB |
 
-Each adapter adds 0.1–0.5 KB to the core. `node scripts/size.ts` enforces the budgets.
+The browser adapters add roughly 0.1–0.6 KB to the core in the measurement below.
+Sizes here were checked on 2026-10-08 with [scripts/size.ts](scripts/size.ts): built
+package entries, esbuild minified ESM targeting ES2022, UTF-8 literals, gzip level 9,
+and 1 KB = 1024 bytes. These exclude engines and site vocabulary; actual application
+bundles and network transfer sizes depend on bundling and delivery. The script also
+enforces the repository's size budgets.
 
 ```js
 import { createAnalyzer } from "fa-search-kit";
@@ -151,8 +176,8 @@ When the words as typed are a weak search, fa-search-kit works out what they wer
 to be:
 - **Keyboard left on another layout**: fixed outright, with a notice: *showing results for
   «دیجی کالا» · search «nd[d ;hgh» as typed*. Standard, legacy Windows and Mac layouts, and
-  Persian letters that spell a Latin name back («سشپسعدل» → samsung). Such a query is never
-  what anyone meant to search.
+  Persian letters that spell a Latin name back («سشپسعدل» → samsung). Candidates can be
+  wrong; keep the as-typed action available.
 - **Misspelled words** (sound-alike letters ت/ط, س/ص/ث, ز/ذ/ض/ظ, ه/ح, ق/غ, a neighbouring
   key, a missing or doubled letter, two letters swapped): offered as a suggestion, *did you
   mean «تارزان»?*, with the results as typed. Only when the words as typed find nothing are
@@ -171,8 +196,8 @@ a site that does not use it ships exactly what it did before.
 
 | entry | what | gzip |
 |---|---|---:|
-| `fa-search-kit/rescue` | `createRescue`, `rescueSearch` for any engine | core + 2.57 KB |
-| `fa-search-kit/pagefind/rescue` | Pagefind UI wiring | `/pagefind` + 3.05 KB (with rescue) |
+| `fa-search-kit/rescue` | `createRescue`, `rescueSearch` for any engine | core + 2.61 KB |
+| `fa-search-kit/pagefind/rescue` | Pagefind UI wiring | `/pagefind` + 3.24 KB (with rescue) |
 | `fa-search-kit/keyboard` | `keyboardCandidates(text)` on its own | 0.79 KB |
 | `fa-search-kit/rescue/build` | the site's word list, written in pieces (build time) | – |
 | `fa-search-kit/analytics` | `canonicalKey(query)` for search logs | core + 0.07 KB |
