@@ -1,6 +1,6 @@
 {
   "name": "fa-search-kit",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Persian search that works in JS, the browser and static sites.",
   "license": "MIT",
   "repository": {

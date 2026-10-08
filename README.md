@@ -33,7 +33,7 @@ npm pack
 In your application, install the generated tarball using its actual absolute path:
 
 ```sh
-npm install /absolute/path/to/fa-search-kit/fa-search-kit-0.0.0.tgz
+npm install /absolute/path/to/fa-search-kit/fa-search-kit-0.1.0.tgz
 ```
 
 See the [installation guide](docs/en/installation.md) for source cloning, ESM setup,

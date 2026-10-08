@@ -5,7 +5,7 @@ description: "نسخه فعلی منتشرنشده را بسازید و همرا
 
 # نصب از سورس
 
-در تاریخ 2026-10-08، رجیستری عمومی npm برای دستور `npm view fa-search-kit version --json` خطای `E404` برگرداند. نسخه ثبت‌شده در این سورس `0.0.0` است. روی در دسترس بودن `npm install fa-search-kit` حساب نکنید؛ فایل بسته را محلی بسازید و نصب کنید.
+در تاریخ 2026-10-08، رجیستری عمومی npm برای دستور `npm view fa-search-kit version --json` خطای `E404` برگرداند. نسخه ثبت‌شده در این سورس `0.1.0` است. روی در دسترس بودن `npm install fa-search-kit` حساب نکنید؛ فایل بسته را محلی بسازید و نصب کنید.
 
 ## ساخت بسته
 
@@ -22,7 +22,7 @@ npm pack
 دستور `npm run build` پوشه `dist/` را می‌سازد. پیش از بسته‌بندی آن را اجرا کنید؛ ساخت خودکار پیش از `npm pack` تعریف نشده است. سپس در پوشه برنامه خود، فایل ساخته‌شده و موتور مورد نیاز را نصب کنید:
 
 ```sh
-npm install /absolute/path/to/fa-search-kit/fa-search-kit-0.0.0.tgz
+npm install /absolute/path/to/fa-search-kit/fa-search-kit-0.1.0.tgz
 npm install minisearch@7.2.0
 ```
 

@@ -5,7 +5,7 @@ description: "Build and install the current unpublished package with the engine 
 
 # Install from source
 
-The public npm registry returned `E404` for `npm view fa-search-kit version --json` on 2026-10-08. This checkout declares version `0.0.0`. Do not rely on `npm install fa-search-kit` being available; use a locally built tarball.
+The public npm registry returned `E404` for `npm view fa-search-kit version --json` on 2026-10-08. This checkout declares version `0.1.0`. Do not rely on `npm install fa-search-kit` being available; use a locally built tarball.
 
 ## Build the package
 
@@ -22,7 +22,7 @@ npm pack
 `npm run build` creates `dist/`. Run it before packing: there is no automatic prepack build. In your application directory, install the generated tarball and whichever engine you use:
 
 ```sh
-npm install /absolute/path/to/fa-search-kit/fa-search-kit-0.0.0.tgz
+npm install /absolute/path/to/fa-search-kit/fa-search-kit-0.1.0.tgz
 npm install minisearch@7.2.0
 ```
 
