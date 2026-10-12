@@ -238,13 +238,16 @@ https://github.com/snowballstem/snowball/issues/304. lunr-languages: an open 202
 already adds `lunr.fa`; we benchmarked it (dev: behind Snowball on most rows, ahead on آ→ا)
 and commented with numbers and an offer to help rebase it on Snowball,
 https://github.com/MihaiValentin/lunr-languages/pull/109#issuecomment-5864755418. The repo is
-not public, so all of these carry their numbers inline.
+not public, so all of these carry their numbers inline. On 2026-10-11 the PR's author asked us to
+update it; on 2026-10-12 we opened https://github.com/theMasix/lunr-languages/pull/1 into #109's
+branch (master merged in, Snowball stemmer ported to ES5, Arabic-letter folding, ZWNJ kept,
+25 stop words; at or above the Snowball column on 33 of 35 dev rows) and replied on #109.
 - **Pagefind:**
   - Add Persian to `pagefind_stem`, generated from Snowball 3.1.x, copying PR #1032.
   - Add ي/ك folding and ZWNJ handling in `fossick/splitting.rs`.
   - Update the multilingual docs table.
 - **Orama:** fix the tokenizer regex, and add the fa stemmer to `@orama/stemmers`.
-- **lunr-languages:** add `lunr.fa` (a stemmer, stop words and tests, per their CONTRIBUTING).
+- **lunr-languages:** add `lunr.fa` (a stemmer, stop words and tests, per their CONTRIBUTING). Sent as a PR into #109's branch (2026-10-12, link above); waiting for its author to merge it.
 - **Snowball:** send test cases and fixes found by the benchmark to `persian.sbl` and snowball-data. The maintainers require written reasons for every rule, and they rejected stripping negation prefixes.
 
 ### Phase 4b (experimental, gated): learned lemmatizer (stemmer layer 3) — **done (2026-09-28): a word list, not a model**
